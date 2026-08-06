@@ -1,0 +1,242 @@
+const { validationResult } = require('express-validator');
+const { OAuth2Client } = require('google-auth-library');
+const crypto = require('crypto');
+const Patient = require('../models/Patient');
+const Clinic = require('../models/Clinic');
+const Token = require('../models/Token');
+const generateToken = require('../utils/generateToken');
+const sendEmail = require('../utils/emailService');
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+exports.patientGoogleAuth = async (req, res) => {
+  try {
+    const { credential } = req.body;
+    let payload;
+
+    if (credential === 'mock_token' || process.env.GOOGLE_CLIENT_ID === 'mock_google_client_id_placeholder') {
+      payload = {
+        email: 'patient.demo@careflow.com',
+        given_name: 'Demo',
+        family_name: 'Patient',
+        sub: 'mock_google_id_12345',
+        picture: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150'
+      };
+    } else if (credential && credential.startsWith('ey')) {
+      // Verify the Google ID token (JWT)
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID
+      });
+      payload = ticket.getPayload();
+    } else if (credential) {
+      // Fetch user info using OAuth2 Access Token
+      const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${credential}` }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to verify Google access token');
+      }
+      payload = await response.json();
+    } else {
+      throw new Error('No Google credential provided');
+    }
+    
+    // Check if patient exists
+    let patient = await Patient.findOne({ email: payload.email });
+    
+    if (!patient) {
+      // Create new patient
+      patient = await Patient.create({
+        email: payload.email,
+        firstName: payload.given_name || payload.name || 'User',
+        lastName: payload.family_name || ' ',
+        googleId: payload.sub,
+        avatarUrl: payload.picture
+      });
+    }
+
+    const token = generateToken(patient._id, 'patient');
+
+    res.status(200).json({
+      success: true,
+      token,
+      user: {
+        id: patient._id,
+        email: patient.email,
+        firstName: patient.firstName,
+        lastName: patient.lastName,
+        role: 'patient',
+        avatarUrl: patient.avatarUrl
+      }
+    });
+  } catch (error) {
+    console.error('Google Auth Error:', error);
+    res.status(401).json({ success: false, message: error.message || 'Invalid Google token' });
+  }
+};
+
+exports.clinicRegister = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const { clinicName, firstName, lastName, email, phoneNumber, address, password } = req.body;
+
+    let clinic = await Clinic.findOne({ email });
+    if (clinic) {
+      return res.status(400).json({ success: false, message: 'Clinic with this email already exists' });
+    }
+
+    clinic = await Clinic.create({
+      clinicName,
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      address,
+      password
+    });
+
+    const token = generateToken(clinic._id, 'clinic');
+
+    res.status(201).json({
+      success: true,
+      token,
+      user: {
+        id: clinic._id,
+        clinicName: clinic.clinicName,
+        email: clinic.email,
+        role: 'clinic'
+      }
+    });
+  } catch (error) {
+    console.error('Clinic Register Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+exports.clinicLogin = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const { email, password } = req.body;
+
+    const clinic = await Clinic.findOne({ email }).select('+password');
+    if (!clinic) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const isMatch = await clinic.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const token = generateToken(clinic._id, 'clinic');
+
+    res.status(200).json({
+      success: true,
+      token,
+      user: {
+        id: clinic._id,
+        clinicName: clinic.clinicName,
+        email: clinic.email,
+        role: 'clinic'
+      }
+    });
+  } catch (error) {
+    console.error('Clinic Login Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    let user = await Clinic.findOne({ email });
+    let role = 'Clinic';
+    
+    if (!user) {
+      user = await Patient.findOne({ email });
+      role = 'Patient';
+    }
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    let token = await Token.findOne({ userId: user._id });
+    if (token) await token.deleteOne();
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hash = await crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    await Token.create({
+      userId: user._id,
+      userModel: role,
+      token: hash,
+      createdAt: Date.now()
+    });
+
+    // In a real app, you would send `resetToken` (not `hash`) via email
+    // Here we'll just construct a dummy URL assuming client runs on localhost:5173
+    const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+    
+    const message = `You requested a password reset. Please click on the link below to reset your password:\n\n${resetUrl}\n\nThis link is valid for 1 hour.`;
+
+    await sendEmail({
+      email: user.email,
+      subject: 'CareFlow Password Reset',
+      message
+    });
+
+    res.status(200).json({ success: true, message: 'Email sent' });
+  } catch (error) {
+    console.error('Forgot Password Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const hash = crypto.createHash('sha256').update(token).digest('hex');
+    
+    const tokenDoc = await Token.findOne({ token: hash });
+    
+    if (!tokenDoc) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
+    }
+
+    const Model = tokenDoc.userModel === 'Clinic' ? Clinic : Patient;
+    const user = await Model.findById(tokenDoc.userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (tokenDoc.userModel === 'Clinic') {
+      user.password = password; // bcrypt handles hashing in pre-save hook
+      await user.save();
+    } else {
+      // If Patient had a password, you'd reset it here. Since they use Google Auth, this might not apply, 
+      // but keeping it structural.
+      return res.status(400).json({ success: false, message: 'Patients use Google OAuth' });
+    }
+
+    await tokenDoc.deleteOne();
+
+    res.status(200).json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Reset Password Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};

@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Build artifacts
+dist/
+.DS_Store
+
+# Environment variables
+.env
+.env.*
+server/.env
+server/.env.*
+
+# IDE / Editor specific
+.vscode/
+
+# React Router generated types
+.react-router/
