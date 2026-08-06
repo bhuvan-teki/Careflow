@@ -290,3 +290,32 @@ exports.runClinicAIAssistant = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to run Clinic AI Assistant' });
   }
 };
+
+/**
+ * Educational AI Patient Symptom Triage Endpoint
+ */
+exports.analyzeTriage = async (req, res) => {
+  try {
+    const { symptoms, patientDetails } = req.body;
+    if (!symptoms || typeof symptoms !== 'string' || !symptoms.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide valid symptom details for triage analysis.'
+      });
+    }
+
+    const { analyzeSymptomTriage } = require('../utils/aiEngine');
+    const analysis = await analyzeSymptomTriage(symptoms.trim(), patientDetails);
+
+    res.status(200).json({
+      success: true,
+      analysis
+    });
+  } catch (error) {
+    console.error('Analyze Triage Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to complete AI educational symptom triage'
+    });
+  }
+};

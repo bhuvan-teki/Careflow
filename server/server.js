@@ -327,6 +327,34 @@ app.post('/api/facilities/details', async (req, res) => {
   }
 });
 
+// Live AI Patient Symptom Triage & Educational Assessment Route
+app.post('/api/triage/analyze', async (req, res) => {
+  try {
+    const { symptoms, patientDetails } = req.body;
+
+    if (!symptoms || typeof symptoms !== 'string' || !symptoms.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please describe your symptoms to perform an AI educational triage assessment.'
+      });
+    }
+
+    const { analyzeSymptomTriage } = require('./src/utils/aiEngine');
+    const analysis = await analyzeSymptomTriage(symptoms.trim(), patientDetails);
+
+    return res.status(200).json({
+      success: true,
+      analysis
+    });
+  } catch (error) {
+    console.error('❌ Triage Analyze Endpoint Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to process AI symptom triage assessment.'
+    });
+  }
+});
+
 // Live Active Patient Consultations Route for Hospital Staff View
 app.get('/api/consultations/active', require('./src/controllers/workflowController').getActiveConsultations);
 

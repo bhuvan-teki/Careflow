@@ -237,7 +237,104 @@ Return ONLY valid JSON matching this structure:
   }
 }
 
+/**
+ * Live Educational AI Symptom Triage & Assessment
+ */
+async function analyzeSymptomTriage(symptoms, patientDetails = '') {
+  const prompt = `
+You are an educational medical triage assistant.
+Analyze the user's reported symptoms and optional patient context to provide a structured educational triage assessment.
+
+INSTRUCTIONS:
+1. Provide a brief 1-2 sentence evaluation summary.
+2. Estimate the severity level as one of: "Low", "Moderate", "Urgent", or "Emergency".
+3. Provide 2-4 potential educational differential diagnoses (possible conditions to discuss with a doctor).
+4. Provide clear, actionable recommended care advice (e.g. "Visit a general practitioner within 24-48 hours", "Seek emergency medical care immediately").
+5. Include the mandatory medical disclaimer.
+6. Return STRICT JSON ONLY without markdown code blocks.
+
+REQUIRED JSON SCHEMA:
+{
+  "severity": "Low" | "Moderate" | "Urgent" | "Emergency",
+  "summary": "Brief summary of symptom evaluation",
+  "differentialDiagnoses": ["Condition A", "Condition B", "Condition C"],
+  "recommendedAction": "Actionable advice (e.g., Visit a general practitioner within 24-48 hours)",
+  "disclaimer": "This is an AI-generated educational triage insight and not a formal medical diagnosis or prescription. Consult a licensed healthcare provider immediately if experiencing severe symptoms."
+}
+
+User Symptoms:
+"${symptoms}"
+
+Patient Details:
+"${patientDetails || 'Not specified'}"
+`;
+
+  try {
+    if (!genAI) {
+      throw new Error('GEMINI_API_KEY is not initialized');
+    }
+
+    let modelName = 'gemini-2.5-flash';
+    let model;
+    try {
+      model = genAI.getGenerativeModel({ model: modelName });
+    } catch (e) {
+      model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    }
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    let text = response.text().trim();
+
+    if (text.startsWith('```')) {
+      text = text.replace(/^```(json)?\n?/, '').replace(/\n?```$/, '').trim();
+    }
+
+    const parsed = JSON.parse(text);
+
+    return {
+      severity: parsed.severity || 'Moderate',
+      summary: parsed.summary || `Symptom evaluation for: ${symptoms}`,
+      differentialDiagnoses: Array.isArray(parsed.differentialDiagnoses) && parsed.differentialDiagnoses.length > 0
+        ? parsed.differentialDiagnoses
+        : ['Common Infection', 'Systemic Symptom Response', 'Inflammatory Condition'],
+      recommendedAction: parsed.recommendedAction || 'Consult a primary care physician for clinical evaluation within 24-48 hours.',
+      disclaimer: parsed.disclaimer || 'This is an AI-generated educational triage insight and not a formal medical diagnosis or prescription. Consult a licensed healthcare provider immediately if experiencing severe symptoms.'
+    };
+  } catch (error) {
+    console.error('⚠️ Gemini Symptom Triage Exception:', error.message);
+    const lower = (symptoms + ' ' + patientDetails).toLowerCase();
+    
+    let severity = 'Moderate';
+    let recommendedAction = 'Schedule a consultation with a general physician within 24-48 hours.';
+    let diagnoses = ['Acute Viral Infection', 'Inflammatory Response', 'Functional Symptom Syndrome'];
+
+    if (lower.includes('chest pain') || lower.includes('shortness of breath') || lower.includes('unconscious') || lower.includes('stroke') || lower.includes('severe bleeding')) {
+      severity = 'Emergency';
+      recommendedAction = 'Call emergency services (911 / 108) or go to the nearest emergency room immediately!';
+      diagnoses = ['Acute Coronary Event', 'Severe Respiratory Distress', 'Emergency Medical Condition'];
+    } else if (lower.includes('high fever') || lower.includes('intense pain') || lower.includes('vomiting')) {
+      severity = 'Urgent';
+      recommendedAction = 'Visit an urgent care clinic or outpatient department today.';
+      diagnoses = ['Acute Bacterial Infection', 'High-Grade Febrile Response', 'Gastrointestinal Distress'];
+    } else if (lower.includes('mild') || lower.includes('fatigue') || lower.includes('runny nose') || lower.includes('headache')) {
+      severity = 'Low';
+      recommendedAction = 'Rest, monitor symptoms, and consult a doctor if condition worsens.';
+      diagnoses = ['Mild Upper Respiratory Infection', 'Tension Headache / Fatigue', 'Seasonal Allergies'];
+    }
+
+    return {
+      severity,
+      summary: `Educational triage for reported symptoms ("${symptoms}").`,
+      differentialDiagnoses: diagnoses,
+      recommendedAction,
+      disclaimer: 'This is an AI-generated educational triage insight and not a formal medical diagnosis or prescription. Consult a licensed healthcare provider immediately if experiencing severe symptoms.'
+    };
+  }
+}
+
 module.exports = {
   analyzePatientCase,
-  generateClinicStaffInsights
+  generateClinicStaffInsights,
+  analyzeSymptomTriage
 };

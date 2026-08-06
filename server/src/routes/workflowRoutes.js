@@ -8,7 +8,8 @@ const {
   getPatientConsultations,
   getClinicConsultations,
   getActiveConsultations,
-  runClinicAIAssistant
+  runClinicAIAssistant,
+  analyzeTriage
 } = require('../controllers/workflowController');
 
 const router = express.Router();
@@ -22,5 +23,6 @@ router.get('/consultations/patient/:patientId', getPatientConsultations);
 router.get('/consultations/clinic/:clinicId', getClinicConsultations);
 router.get('/consultations/active', getActiveConsultations);
 router.post('/clinic-ai-assistant', runClinicAIAssistant);
+router.post('/triage/analyze', analyzeTriage);
 
 module.exports = router;
