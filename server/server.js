@@ -16,20 +16,28 @@ const app = express();
 
 // Production-ready CORS Configuration
 const allowedOrigins = [
-  'http://localhost:5173', // for local development
-  'https://careflow.vercel.app' // **REPLACE THIS** with your actual Vercel frontend URL
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'https://careflow-front-end.onrender.com',
+  'https://careflow.vercel.app'
 ];
 
-// Middleware
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.onrender.com') || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
     }
-  }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
+
+// Explicit Preflight OPTIONS Handler
+app.options('*', cors());
 app.use(express.json());
 
 app.use((req, res, next) => {
