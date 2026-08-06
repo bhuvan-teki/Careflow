@@ -434,9 +434,27 @@ export function PatientDashboard() {
 
                     <div>
                       <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block mb-1">Pathway</span>
-                      <p className="text-white font-semibold">General Physician</p>
+                      <p className="text-white font-semibold">{triageAnalysis?.recommended_pathway || 'General Physician'}</p>
                     </div>
                   </div>
+
+                  {/* Automated ICD-10 Medical Billing Code (Phase 1) */}
+                  {triageAnalysis?.billing_data?.icd_10_code && (
+                    <div className="pt-4 border-t border-[#262626] flex flex-wrap items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Automated Billing Code:</span>
+                        <span className="font-mono text-xs font-bold text-cyan-400 bg-cyan-950/60 border border-cyan-500/40 px-2.5 py-1 rounded-md tracking-wider">
+                          ICD-10: {triageAnalysis.billing_data.icd_10_code}
+                        </span>
+                        <span className="text-xs text-zinc-300 font-medium italic">
+                          — {triageAnalysis.billing_data.icd_10_description || 'Unspecified Medical Condition'}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-cyan-400/80 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded">
+                        Phase 1: Automated Coding Active
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* AI EDUCATIONAL TRIAGE EVALUATION RESULTS */}

@@ -6,6 +6,13 @@ import { useToast } from '../../components/ui/Toast';
 export interface TriageAnalysis {
   severity: 'Low' | 'Moderate' | 'Urgent' | 'Emergency';
   summary: string;
+  executive_summary?: string;
+  triage_level?: string;
+  recommended_pathway?: string;
+  billing_data?: {
+    icd_10_code: string;
+    icd_10_description: string;
+  };
   differentialDiagnoses: string[];
   recommendedAction: string;
   disclaimer: string;
@@ -202,9 +209,29 @@ export const SymptomTriageCard: React.FC = () => {
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-zinc-200">Clinical Evaluation Summary</h3>
             <p className="text-sm text-zinc-300 leading-relaxed bg-zinc-900/60 border border-zinc-800/80 p-4 rounded-xl">
-              {analysis.summary}
+              {analysis.executive_summary || analysis.summary}
             </p>
           </div>
+
+          {/* Automated Billing Code (ICD-10) */}
+          {analysis?.billing_data?.icd_10_code && (
+            <div className="bg-zinc-900/90 border border-cyan-500/30 p-4 rounded-xl space-y-2.5 shadow-lg shadow-cyan-950/20">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Automated Billing Code (ICD-10)</span>
+                <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded">
+                  Phase 1 Active
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-mono text-sm font-bold text-cyan-300 bg-cyan-950/80 border border-cyan-400/50 px-3 py-1 rounded-lg tracking-wider shadow-sm shadow-cyan-500/10">
+                  ICD-10: {analysis.billing_data.icd_10_code}
+                </span>
+                <span className="text-sm text-zinc-200 font-medium">
+                  — {analysis.billing_data.icd_10_description || 'Unspecified Medical Condition'}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Differential Diagnoses */}
           <div className="space-y-3">

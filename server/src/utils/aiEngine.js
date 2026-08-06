@@ -238,34 +238,39 @@ Return ONLY valid JSON matching this structure:
 }
 
 /**
- * Live Educational AI Symptom Triage & Assessment
+ * Live Educational AI Symptom Triage & Assessment with Automated ICD-10 Medical Coding
  */
 async function analyzeSymptomTriage(symptoms, patientDetails = '') {
   const prompt = `
-You are an educational medical triage assistant.
-Analyze the user's reported symptoms and optional patient context to provide a structured educational triage assessment.
+You are CareFlow AI, an expert medical triage assistant and certified clinical coding specialist.
+Analyze the user's reported symptoms and patient context to provide a structured educational triage assessment and automated ICD-10 medical coding.
 
-INSTRUCTIONS:
-1. Provide a brief 1-2 sentence evaluation summary.
-2. Estimate the severity level as one of: "Low", "Moderate", "Urgent", or "Emergency".
-3. Provide 2-4 potential educational differential diagnoses (possible conditions to discuss with a doctor).
-4. Provide clear, actionable recommended care advice (e.g. "Visit a general practitioner within 24-48 hours", "Seek emergency medical care immediately").
-5. Include the mandatory medical disclaimer.
-6. Return STRICT JSON ONLY without markdown code blocks.
+CRITICAL INSTRUCTIONS:
+1. Return a raw, valid JSON object ONLY. Do NOT include markdown code blocks, backticks (\`\`\`json), or conversational text.
+2. Formulate a precise ICD-10 diagnostic billing code (e.g., R50.9, R51.9, R07.9, M54.5, R05.9, J06.9, R10.9) and official medical description matching the reported symptoms.
+3. Classify triage_level as "Low", "Moderate", "Urgent", or "Emergency".
+4. Assign recommended_pathway as "General Physician", "Cardiology", "Pulmonology", "Neurology", "Orthopedics", or "Emergency Medicine".
 
 REQUIRED JSON SCHEMA:
 {
+  "executive_summary": "Concise 1-2 sentence executive summary of the clinical evaluation.",
+  "triage_level": "Low" | "Moderate" | "Urgent" | "Emergency",
+  "recommended_pathway": "General Physician" | "Cardiology" | "Pulmonology" | "Neurology" | "Orthopedics" | "Emergency Medicine",
+  "billing_data": {
+    "icd_10_code": "R50.9",
+    "icd_10_description": "Fever, unspecified"
+  },
   "severity": "Low" | "Moderate" | "Urgent" | "Emergency",
   "summary": "Brief summary of symptom evaluation",
-  "differentialDiagnoses": ["Condition A", "Condition B", "Condition C"],
-  "recommendedAction": "Actionable advice (e.g., Visit a general practitioner within 24-48 hours)",
-  "disclaimer": "This is an AI-generated educational triage insight and not a formal medical diagnosis or prescription. Consult a licensed healthcare provider immediately if experiencing severe symptoms."
+  "differentialDiagnoses": ["Condition A", "Condition B"],
+  "recommendedAction": "Actionable care advice",
+  "disclaimer": "This is an AI-generated educational triage insight and not a formal medical diagnosis or prescription."
 }
 
 User Symptoms:
 "${symptoms}"
 
-Patient Details:
+Patient Context:
 "${patientDetails || 'Not specified'}"
 `;
 
@@ -292,9 +297,20 @@ Patient Details:
 
     const parsed = JSON.parse(text);
 
+    // Extract or build default billing_data
+    const icdCode = parsed.billing_data?.icd_10_code || 'R69';
+    const icdDesc = parsed.billing_data?.icd_10_description || 'Illness, unspecified';
+
     return {
-      severity: parsed.severity || 'Moderate',
-      summary: parsed.summary || `Symptom evaluation for: ${symptoms}`,
+      executive_summary: parsed.executive_summary || parsed.summary || `Clinical symptom evaluation for: ${symptoms}`,
+      triage_level: parsed.triage_level || parsed.severity || 'Moderate',
+      recommended_pathway: parsed.recommended_pathway || 'General Physician',
+      billing_data: {
+        icd_10_code: icdCode,
+        icd_10_description: icdDesc
+      },
+      severity: parsed.severity || parsed.triage_level || 'Moderate',
+      summary: parsed.summary || parsed.executive_summary || `Symptom evaluation for: ${symptoms}`,
       differentialDiagnoses: Array.isArray(parsed.differentialDiagnoses) && parsed.differentialDiagnoses.length > 0
         ? parsed.differentialDiagnoses
         : ['Common Infection', 'Systemic Symptom Response', 'Inflammatory Condition'],
@@ -308,22 +324,55 @@ Patient Details:
     let severity = 'Moderate';
     let recommendedAction = 'Schedule a consultation with a general physician within 24-48 hours.';
     let diagnoses = ['Acute Viral Infection', 'Inflammatory Response', 'Functional Symptom Syndrome'];
+    let pathway = 'General Physician';
+    let icdCode = 'R69';
+    let icdDesc = 'Illness, unspecified';
 
     if (lower.includes('chest pain') || lower.includes('shortness of breath') || lower.includes('unconscious') || lower.includes('stroke') || lower.includes('severe bleeding')) {
       severity = 'Emergency';
+      pathway = 'Emergency Medicine';
       recommendedAction = 'Call emergency services (911 / 108) or go to the nearest emergency room immediately!';
       diagnoses = ['Acute Coronary Event', 'Severe Respiratory Distress', 'Emergency Medical Condition'];
-    } else if (lower.includes('high fever') || lower.includes('intense pain') || lower.includes('vomiting')) {
-      severity = 'Urgent';
-      recommendedAction = 'Visit an urgent care clinic or outpatient department today.';
-      diagnoses = ['Acute Bacterial Infection', 'High-Grade Febrile Response', 'Gastrointestinal Distress'];
-    } else if (lower.includes('mild') || lower.includes('fatigue') || lower.includes('runny nose') || lower.includes('headache')) {
+      icdCode = 'R07.9';
+      icdDesc = 'Chest pain, unspecified';
+    } else if (lower.includes('fever') || lower.includes('temp') || lower.includes('pyrexia')) {
+      severity = 'Moderate';
+      pathway = 'General Physician';
+      recommendedAction = 'Rest, maintain hydration, and consult a general practitioner if fever persists past 48 hours.';
+      diagnoses = ['Pyrexia of Unknown Origin', 'Acute Viral Syndrome', 'Systemic Response'];
+      icdCode = 'R50.9';
+      icdDesc = 'Fever, unspecified';
+    } else if (lower.includes('headache') || lower.includes('migraine') || lower.includes('dizzy')) {
+      severity = 'Moderate';
+      pathway = 'Neurology';
+      recommendedAction = 'Rest in a quiet room, stay hydrated, and consult a physician if symptoms recur.';
+      diagnoses = ['Tension Headache', 'Migraine Syndrome', 'Cranial Discomfort'];
+      icdCode = 'R51.9';
+      icdDesc = 'Headache, unspecified';
+    } else if (lower.includes('back') || lower.includes('joint') || lower.includes('knee') || lower.includes('spine')) {
+      severity = 'Moderate';
+      pathway = 'Orthopedics';
+      recommendedAction = 'Apply warm compress, avoid strenuous lifting, and consult an orthopedic specialist.';
+      diagnoses = ['Acute Musculoskeletal Strain', 'Joint Inflammation', 'Lumbar Discomfort'];
+      icdCode = 'M54.5';
+      icdDesc = 'Low back pain, unspecified';
+    } else if (lower.includes('cough') || lower.includes('throat') || lower.includes('cold')) {
       severity = 'Low';
-      recommendedAction = 'Rest, monitor symptoms, and consult a doctor if condition worsens.';
-      diagnoses = ['Mild Upper Respiratory Infection', 'Tension Headache / Fatigue', 'Seasonal Allergies'];
+      pathway = 'Pulmonology';
+      recommendedAction = 'Stay hydrated, utilize warm fluids, and consult a doctor if cough lasts > 7 days.';
+      diagnoses = ['Acute Upper Respiratory Tract Infection', 'Bronchial Irritation', 'Pharyngitis'];
+      icdCode = 'J06.9';
+      icdDesc = 'Acute upper respiratory infection, unspecified';
     }
 
     return {
+      executive_summary: `Structured triage assessment for reported symptoms ("${symptoms}").`,
+      triage_level: severity,
+      recommended_pathway: pathway,
+      billing_data: {
+        icd_10_code: icdCode,
+        icd_10_description: icdDesc
+      },
       severity,
       summary: `Educational triage for reported symptoms ("${symptoms}").`,
       differentialDiagnoses: diagnoses,
