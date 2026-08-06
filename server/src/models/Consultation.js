@@ -45,6 +45,14 @@ const consultationSchema = new mongoose.Schema({
     }],
     disclaimer: { type: String, default: 'Operational summary only. Does not replace professional medical diagnosis.' }
   },
+  assessmentData: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
+  triageAnalysis: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
   timeline: [timelineItemSchema]
 }, { timestamps: true });
 

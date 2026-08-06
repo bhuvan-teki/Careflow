@@ -39,11 +39,11 @@ export function PatientDashboard() {
   // 6 Structured Questions Form State
   const [assessmentData, setAssessmentData] = useState<AssessmentForm>({
     patientType: 'Self',
-    ageGender: '45 years, male',
-    symptomStart: '2 days ago',
+    ageGender: 'Adult',
+    symptomStart: '1-2 Days',
     severity: 'Moderate',
-    additionalSymptoms: 'Body pain, Mild fever',
-    medicalConditions: 'No known allergies'
+    additionalSymptoms: '',
+    medicalConditions: ''
   });
 
   const [activeConsultationId, setActiveConsultationId] = useState<string | null>(null);
@@ -52,6 +52,55 @@ export function PatientDashboard() {
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  // CRITICAL FIX: Synchronize & reset state when activeConsultationId changes
+  useEffect(() => {
+    if (!activeConsultationId) return;
+
+    const consult = historyConsultations[activeConsultationId];
+    if (!consult) return;
+
+    // 1. MUST explicitly clear stale triage state immediately
+    setTriageAnalysis(null);
+
+    // 2. Restore unique initial complaint
+    const title = consult.rawPatientInput || (consult.aiAnalysis?.symptoms ? consult.aiAnalysis.symptoms.join(', ') : 'Consultation Record');
+    setInitialComplaint(title);
+    setPhase('summary');
+
+    // 3. Restore unique assessmentData
+    if (consult.assessmentData && consult.assessmentData.ageGender) {
+      setAssessmentData(consult.assessmentData);
+    } else {
+      // Fallback parsing for legacy records
+      const symptomsList = consult.aiAnalysis?.symptoms?.join(', ') || title;
+      setAssessmentData({
+        patientType: 'Self',
+        ageGender: consult.aiAnalysis?.urgency ? `${consult.aiAnalysis.urgency} Urgency Patient` : 'Adult',
+        symptomStart: consult.aiAnalysis?.duration || '1-2 Days',
+        severity: consult.aiAnalysis?.severity || 'Moderate',
+        additionalSymptoms: symptomsList,
+        medicalConditions: consult.aiAnalysis?.riskFactors?.length ? consult.aiAnalysis.riskFactors.join(', ') : 'None'
+      });
+    }
+
+    // 4. Restore unique triageAnalysis (including ICD-10 medical billing code)
+    if (consult.triageAnalysis && consult.triageAnalysis.billing_data) {
+      setTriageAnalysis(consult.triageAnalysis);
+    } else {
+      // Re-fetch triage analysis for legacy records missing stored triageAnalysis
+      api.post('/triage/analyze', {
+        symptoms: title,
+        patientDetails: consult.aiAnalysis?.duration ? `Onset: ${consult.aiAnalysis.duration}` : 'Intake Record'
+      }).then(res => {
+        if (res.data?.success && res.data?.analysis) {
+          setTriageAnalysis(res.data.analysis);
+        }
+      }).catch(err => {
+        console.error('Failed to restore triage analysis:', err);
+      });
+    }
+  }, [activeConsultationId, historyConsultations]);
 
   const fetchInitialData = async () => {
     try {
@@ -83,11 +132,13 @@ export function PatientDashboard() {
   };
 
   const handleSelectHistoryItem = (id: string) => {
+    // 1. Explicitly clear current triage data first to prevent stale state retention
+    setTriageAnalysis(null);
     setActiveConsultationId(id);
+    setPhase('summary');
+
     const consult = historyConsultations[id];
     if (consult) {
-      setInitialComplaint(consult.rawPatientInput || consult.aiAnalysis?.symptoms?.join(', ') || 'Consultation Record');
-      setPhase('summary');
       toast({
         title: "Conversation Loaded",
         description: `Viewing: ${(consult.rawPatientInput || 'Consultation Record').slice(0, 35)}...`,
@@ -105,6 +156,7 @@ export function PatientDashboard() {
         setActiveConsultationId(null);
         setPhase('intake');
         setInitialComplaint('');
+        setTriageAnalysis(null);
       }
       toast({ title: "Conversation Removed", description: "Deleted history record.", type: "success" });
     } catch (err) {
@@ -125,24 +177,31 @@ export function PatientDashboard() {
     setPhase('summary');
     setIsAnalyzing(true);
     try {
-      const fullNarrative = `${initialComplaint}. Patient: ${assessmentData.patientType} (${assessmentData.ageGender || 'Adult'}). Onset: ${assessmentData.symptomStart || '1-2 Days'}, Severity: ${assessmentData.severity || 'Moderate'}. Symptoms: ${assessmentData.additionalSymptoms || initialComplaint}. History: ${assessmentData.medicalConditions || 'None'}`;
-      
-      const [wfResult, triageResult] = await Promise.allSettled([
-        api.post('/workflow/analyze', {
-          patientMessage: fullNarrative,
-          patientId: user?.id || '65f1a2b3c4d5e6f7a8b9c0d1'
-        }),
-        api.post('/triage/analyze', {
-          symptoms: initialComplaint,
-          patientDetails: `${assessmentData.patientType}, ${assessmentData.ageGender}, ${assessmentData.symptomStart}`
-        })
-      ]);
+      // 1. First get unique AI triage analysis with ICD-10 billing code
+      const triageRes = await api.post('/triage/analyze', {
+        symptoms: initialComplaint,
+        patientDetails: `${assessmentData.patientType}, ${assessmentData.ageGender}, ${assessmentData.symptomStart}`
+      });
 
-      if (triageResult.status === 'fulfilled' && triageResult.value.data?.success && triageResult.value.data?.analysis) {
-        setTriageAnalysis(triageResult.value.data.analysis);
+      let currentTriageAnalysis = null;
+      if (triageRes.data?.success && triageRes.data?.analysis) {
+        currentTriageAnalysis = triageRes.data.analysis;
+        setTriageAnalysis(currentTriageAnalysis);
       }
 
-      if (wfResult.status === 'fulfilled' && wfResult.value.data?.success) {
+      const fullNarrative = `${initialComplaint}. Patient: ${assessmentData.patientType} (${assessmentData.ageGender || 'Adult'}). Onset: ${assessmentData.symptomStart || '1-2 Days'}, Severity: ${assessmentData.severity || 'Moderate'}. Symptoms: ${assessmentData.additionalSymptoms || initialComplaint}. History: ${assessmentData.medicalConditions || 'None'}`;
+
+      // 2. Save consultation with unique assessmentData and triageAnalysis to database
+      const wfRes = await api.post('/workflow/analyze', {
+        patientMessage: fullNarrative,
+        patientId: user?.id || '65f1a2b3c4d5e6f7a8b9c0d1',
+        consultationId: activeConsultationId || undefined,
+        assessmentData,
+        triageAnalysis: currentTriageAnalysis
+      });
+
+      if (wfRes.data?.success && wfRes.data?.consultation?._id) {
+        setActiveConsultationId(wfRes.data.consultation._id);
         fetchInitialData();
       }
     } catch (err) {
@@ -158,6 +217,14 @@ export function PatientDashboard() {
     setInitialComplaint('');
     setCurrentQuestionStep(1);
     setTriageAnalysis(null);
+    setAssessmentData({
+      patientType: 'Self',
+      ageGender: 'Adult',
+      symptomStart: '1-2 Days',
+      severity: 'Moderate',
+      additionalSymptoms: '',
+      medicalConditions: ''
+    });
   };
 
   return (

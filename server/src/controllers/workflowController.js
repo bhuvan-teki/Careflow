@@ -20,7 +20,7 @@ const DEFAULT_TIMELINE = [
  */
 exports.analyzeWorkflow = async (req, res) => {
   try {
-    const { patientMessage, consultationId, patientId } = req.body;
+    const { patientMessage, consultationId, patientId, assessmentData, triageAnalysis } = req.body;
 
     if (!patientMessage) {
       return res.status(400).json({ success: false, message: 'Patient message is required' });
@@ -37,6 +37,8 @@ exports.analyzeWorkflow = async (req, res) => {
     if (consultation) {
       consultation.rawPatientInput = patientMessage;
       consultation.aiAnalysis = aiAnalysis;
+      if (assessmentData) consultation.assessmentData = assessmentData;
+      if (triageAnalysis) consultation.triageAnalysis = triageAnalysis;
       consultation.status = 'analyzed';
       await consultation.save();
     } else {
@@ -44,6 +46,8 @@ exports.analyzeWorkflow = async (req, res) => {
         patientId: patientId || '65f1a2b3c4d5e6f7a8b9c0d1', // Fallback ID if not passed
         rawPatientInput: patientMessage,
         aiAnalysis,
+        assessmentData: assessmentData || null,
+        triageAnalysis: triageAnalysis || null,
         status: 'analyzed',
         timeline: DEFAULT_TIMELINE
       });
