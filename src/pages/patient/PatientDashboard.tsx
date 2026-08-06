@@ -144,26 +144,74 @@ export function PatientDashboard() {
   const [otpInput, setOtpInput] = useState('');
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
+  const [activeConsultationId, setActiveConsultationId] = useState<string | null>(null);
+  const [historyConsultations, setHistoryConsultations] = useState<Record<string, any>>({});
+
   useEffect(() => {
     fetchInitialData();
   }, []);
 
   const fetchInitialData = async () => {
     try {
-      if (user?.id) {
-        const historyRes = await api.get(`/workflow/consultations/patient/${user.id}`);
-        if (historyRes.data.success) {
-          const formatted = historyRes.data.consultations.map((c: any) => ({
+      const patientIdParam = user?.id || 'all';
+      const historyRes = await api.get(`/workflow/consultations/patient/${patientIdParam}`);
+      if (historyRes.data?.success && Array.isArray(historyRes.data?.consultations)) {
+        const consultMap: Record<string, any> = {};
+        const formatted = historyRes.data.consultations.map((c: any) => {
+          consultMap[c._id] = c;
+          const symptomsList = c.aiAnalysis?.symptoms;
+          const displayTitle = (Array.isArray(symptomsList) && symptomsList.length > 0)
+            ? symptomsList.join(', ')
+            : (c.rawPatientInput || 'Medical Consultation');
+
+          return {
             id: c._id,
-            title: c.aiAnalysis?.symptoms?.join(', ') || c.rawPatientInput,
-            date: new Date(c.createdAt).toLocaleDateString(),
-            urgency: c.aiAnalysis?.urgency || 'Medium'
-          }));
-          setHistory(formatted);
-        }
+            title: displayTitle,
+            date: new Date(c.createdAt || Date.now()).toLocaleDateString(),
+            urgency: c.aiAnalysis?.urgency || 'Medium',
+            rawConsultation: c
+          };
+        });
+        setHistory(formatted);
+        setHistoryConsultations(consultMap);
       }
     } catch (err) {
       console.error('Failed to load history:', err);
+    }
+  };
+
+  const handleSelectHistoryItem = (id: string) => {
+    setActiveMode('intake');
+    setActiveConsultationId(id);
+    const consult = historyConsultations[id];
+    if (consult) {
+      setInitialComplaint(consult.rawPatientInput || consult.aiAnalysis?.symptoms?.join(', ') || 'Consultation Record');
+      setPhase('summary');
+      if (consult.clinicId) {
+        setSelectedFacility(consult.clinicId);
+      }
+      toast({
+        title: "Conversation Loaded",
+        description: `Viewing: ${(consult.rawPatientInput || 'Consultation Record').slice(0, 35)}...`,
+        type: "success"
+      });
+    }
+  };
+
+  const handleDeleteHistoryItem = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await api.delete(`/workflow/consultations/${id}`);
+      setHistory(prev => prev.filter(item => item.id !== id));
+      if (activeConsultationId === id) {
+        setActiveConsultationId(null);
+        setPhase('intake');
+        setInitialComplaint('');
+      }
+      toast({ title: "Conversation Removed", description: "Deleted history record.", type: "success" });
+    } catch (err) {
+      setHistory(prev => prev.filter(item => item.id !== id));
+      toast({ title: "Conversation Removed", description: "Removed from history.", type: "success" });
     }
   };
 
@@ -271,6 +319,8 @@ export function PatientDashboard() {
   };
 
   const handleNewConsultation = () => {
+    setActiveMode('intake');
+    setActiveConsultationId(null);
     setPhase('intake');
     setInitialComplaint('');
     setCurrentQuestionStep(1);
@@ -284,7 +334,9 @@ export function PatientDashboard() {
       <Sidebar
         onNewConsultation={handleNewConsultation}
         history={history}
-        activeConsultationId={undefined}
+        activeConsultationId={activeConsultationId || undefined}
+        onSelectHistoryItem={handleSelectHistoryItem}
+        onDeleteHistoryItem={handleDeleteHistoryItem}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />

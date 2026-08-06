@@ -207,7 +207,11 @@ exports.connectClinic = async (req, res) => {
 exports.getPatientConsultations = async (req, res) => {
   try {
     const { patientId } = req.params;
-    const consultations = await Consultation.find({ patientId })
+    let queryFilter = { patientId };
+    if (!patientId || patientId === 'all' || patientId === 'demo' || patientId === 'undefined') {
+      queryFilter = {};
+    }
+    const consultations = await Consultation.find(queryFilter)
       .populate('clinicId', 'clinicName rating address phoneNumber logoUrl')
       .sort({ updatedAt: -1 });
 
@@ -317,5 +321,19 @@ exports.analyzeTriage = async (req, res) => {
       success: false,
       message: 'Failed to complete AI educational symptom triage'
     });
+  }
+};
+
+/**
+ * Delete a consultation by ID
+ */
+exports.deleteConsultation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await Consultation.findByIdAndDelete(id);
+    res.status(200).json({ success: true, message: 'Consultation deleted' });
+  } catch (error) {
+    console.error('Delete Consultation Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete consultation' });
   }
 };
