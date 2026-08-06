@@ -53,13 +53,14 @@ app.use('/api/orders', require('./src/routes/orderRoutes'));
 // Google Maps Places API & Live GIS Nearby Facilities Discovery Route
 app.post('/api/facilities/nearby', async (req, res) => {
   try {
-    const lat = parseFloat(req.body.lat);
-    const lng = parseFloat(req.body.lng);
+    let lat = parseFloat(req.body.lat);
+    let lng = parseFloat(req.body.lng);
     const type = req.body.type || 'hospital';
 
     if (isNaN(lat) || isNaN(lng)) {
-      console.error('❌ Nearby Facilities Error: Invalid lat/lng parameters', req.body);
-      return res.status(400).json({ success: false, message: 'Valid numerical latitude and longitude are required.' });
+      console.log('ℹ️ Missing or invalid lat/lng in request, defaulting to regional healthcare center [17.352019, 78.332058]');
+      lat = 17.352019;
+      lng = 78.332058;
     }
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
