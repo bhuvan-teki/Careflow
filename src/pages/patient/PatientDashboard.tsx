@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
 import { FacilityDetailView } from '../../components/patient/FacilityDetailView';
-import { SymptomTriageCard } from '../../components/patient/SymptomTriageCard';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../lib/api';
@@ -17,8 +16,10 @@ import {
   Truck, 
   KeyRound, 
   Sparkles, 
-  Send,
-  FileText
+  FileText,
+  Stethoscope,
+  ShieldAlert,
+  ArrowRight
 } from 'lucide-react';
 
 interface AssessmentForm {
@@ -43,12 +44,12 @@ export function PatientDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // State Management for 10-Step Journey
-  const [activeMode, setActiveMode] = useState<'intake' | 'triage'>('intake');
+  // Unified State Management
   const [phase, setPhase] = useState<'intake' | 'assessment' | 'summary' | 'checkout' | 'tracking'>('intake');
   const [initialComplaint, setInitialComplaint] = useState('');
   const [currentQuestionStep, setCurrentQuestionStep] = useState(1);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [triageAnalysis, setTriageAnalysis] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -181,7 +182,6 @@ export function PatientDashboard() {
   };
 
   const handleSelectHistoryItem = (id: string) => {
-    setActiveMode('intake');
     setActiveConsultationId(id);
     const consult = historyConsultations[id];
     if (consult) {
@@ -225,17 +225,32 @@ export function PatientDashboard() {
 
   const handleCompleteIntake = async () => {
     setPhase('summary');
+    setIsAnalyzing(true);
     try {
       const fullNarrative = `${initialComplaint}. Patient: ${assessmentData.patientType} (${assessmentData.ageGender || 'Adult'}). Onset: ${assessmentData.symptomStart || '1-2 Days'}, Severity: ${assessmentData.severity || 'Moderate'}. Symptoms: ${assessmentData.additionalSymptoms || initialComplaint}. History: ${assessmentData.medicalConditions || 'None'}`;
-      const res = await api.post('/workflow/analyze', {
-        patientMessage: fullNarrative,
-        patientId: user?.id || '65f1a2b3c4d5e6f7a8b9c0d1'
-      });
-      if (res.data.success) {
+      
+      const [wfResult, triageResult] = await Promise.allSettled([
+        api.post('/workflow/analyze', {
+          patientMessage: fullNarrative,
+          patientId: user?.id || '65f1a2b3c4d5e6f7a8b9c0d1'
+        }),
+        api.post('/triage/analyze', {
+          symptoms: initialComplaint,
+          patientDetails: `${assessmentData.patientType}, ${assessmentData.ageGender}, ${assessmentData.symptomStart}`
+        })
+      ]);
+
+      if (triageResult.status === 'fulfilled' && triageResult.value.data?.success && triageResult.value.data?.analysis) {
+        setTriageAnalysis(triageResult.value.data.analysis);
+      }
+
+      if (wfResult.status === 'fulfilled' && wfResult.value.data?.success) {
         fetchInitialData();
       }
     } catch (err) {
       console.error('Failed to save consultation to database:', err);
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -319,11 +334,11 @@ export function PatientDashboard() {
   };
 
   const handleNewConsultation = () => {
-    setActiveMode('intake');
     setActiveConsultationId(null);
     setPhase('intake');
     setInitialComplaint('');
     setCurrentQuestionStep(1);
+    setTriageAnalysis(null);
     setCart([]);
     setActiveOrder(null);
   };
@@ -352,71 +367,52 @@ export function PatientDashboard() {
         <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
           <div className="w-full max-w-6xl mx-auto space-y-6">
 
-            {/* Mode Switcher Navigation Bar */}
-            <div className="flex flex-wrap items-center justify-start gap-2 border-b border-zinc-800/80 pb-4">
-              <button
-                onClick={() => setActiveMode('intake')}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold tracking-tight flex items-center gap-2 transition-all ${
-                  activeMode === 'intake'
-                    ? 'bg-white text-black shadow-lg shadow-white/5'
-                    : 'bg-zinc-900/90 text-zinc-400 hover:text-white border border-zinc-800'
-                }`}
-              >
-                <Activity className="w-3.5 h-3.5" />
-                Clinical Care Workflow
-              </button>
-
-              <button
-                onClick={() => setActiveMode('triage')}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold tracking-tight flex items-center gap-2 transition-all ${
-                  activeMode === 'triage'
-                    ? 'bg-white text-black shadow-lg shadow-white/5'
-                    : 'bg-zinc-900/90 text-zinc-400 hover:text-white border border-zinc-800'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                AI Educational Symptom Triage
-              </button>
-            </div>
-
-            {activeMode === 'triage' ? (
-              <SymptomTriageCard />
-            ) : (
-              <>
-            {/* STEP 1: INITIAL CONDITION INTAKE */}
+            {/* STEP 1: INITIAL CONDITION INTAKE (AI Patient Symptom Triage) */}
             {phase === 'intake' && (
-              <div className="pt-20 text-center space-y-6">
-                <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto">
-                  <Activity className="h-6 w-6" />
-                </div>
-                <div className="space-y-2">
-                  <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-                    CareFlow AI Medical Intake & Care Automation
-                  </h1>
-                  <p className="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto">
-                    Describe your condition to initiate a structured 6-question clinical assessment.
-                  </p>
+              <div className="bg-[#0A0A0A] border border-zinc-800/80 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 max-w-4xl mx-auto my-6">
+                <div className="flex items-center justify-between border-b border-zinc-800/60 pb-5">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white">
+                      <Stethoscope className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                        AI Patient Symptom Triage
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <Sparkles className="w-3 h-3" /> Educational AI
+                        </span>
+                      </h2>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        Describe your symptoms for an immediate AI educational triage evaluation and care advice.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <form onSubmit={handleStartIntake} className="max-w-xl mx-auto space-y-3">
-                  <div className="bg-[#111111] border border-[#2A2A2A] rounded-2xl p-2 focus-within:border-zinc-700 transition-colors shadow-2xl">
+                <form onSubmit={handleStartIntake} className="space-y-5">
+                  <div>
+                    <label htmlFor="symptoms" className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
+                      Reported Symptoms <span className="text-red-400">*</span>
+                    </label>
                     <textarea
+                      id="symptoms"
+                      rows={4}
                       value={initialComplaint}
                       onChange={(e) => setInitialComplaint(e.target.value)}
-                      placeholder="Example: My father has fever and headache from yesterday..."
-                      rows={3}
-                      className="w-full bg-transparent border-0 px-3.5 py-2 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none resize-none"
+                      placeholder="e.g. Persistent headache with mild fever and sensitivity to light for 2 days..."
+                      className="w-full bg-zinc-900/70 border border-zinc-800 rounded-xl p-4 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition resize-none"
                     />
-                    <div className="flex justify-end pr-2 pb-2">
-                      <button
-                        type="submit"
-                        disabled={!initialComplaint.trim()}
-                        className="bg-white hover:bg-zinc-200 text-black px-4 py-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-colors disabled:opacity-30"
-                      >
-                        <span>Start Clinical Assessment</span>
-                        <Send className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      type="submit"
+                      disabled={!initialComplaint.trim()}
+                      className="px-6 py-3 rounded-xl bg-white text-black font-semibold text-sm hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2 shadow-lg shadow-white/5"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>Analyze Symptoms with AI</span>
+                    </button>
                   </div>
                 </form>
               </div>
@@ -624,6 +620,73 @@ export function PatientDashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* AI EDUCATIONAL TRIAGE EVALUATION RESULTS */}
+                {triageAnalysis && (
+                  <div className="bg-[#121212] border border-[#262626] rounded-xl p-6 space-y-6">
+                    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#262626] pb-4">
+                      <div>
+                        <span className="text-xs uppercase tracking-wider text-zinc-400 font-semibold">Triage Severity Evaluation</span>
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                            <Activity className="w-3.5 h-3.5" />
+                            {triageAnalysis.severity || 'Moderate'} Urgency
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-xs text-zinc-500">Evaluated by CareFlow AI Assistant</span>
+                    </div>
+
+                    {triageAnalysis.summary && (
+                      <div className="space-y-2">
+                        <h3 className="text-xs font-semibold text-zinc-300">Clinical Evaluation Summary</h3>
+                        <p className="text-xs text-zinc-300 leading-relaxed bg-[#171717] border border-[#262626] p-4 rounded-lg">
+                          {triageAnalysis.summary}
+                        </p>
+                      </div>
+                    )}
+
+                    {Array.isArray(triageAnalysis.differentialDiagnoses) && triageAnalysis.differentialDiagnoses.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-xs font-semibold text-zinc-300 flex items-center gap-2">
+                          <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                          Potential Educational Differential Diagnoses
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {triageAnalysis.differentialDiagnoses.map((diag: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2.5 bg-[#171717] border border-[#262626] p-3 rounded-lg text-xs text-zinc-200">
+                              <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
+                              <span>{diag}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {triageAnalysis.recommendedAction && (
+                      <div className="space-y-2">
+                        <h3 className="text-xs font-semibold text-zinc-300 flex items-center gap-2">
+                          <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
+                          Recommended Next Action
+                        </h3>
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-lg text-xs font-medium text-emerald-300 flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <div>{triageAnalysis.recommendedAction}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {triageAnalysis.disclaimer && (
+                      <div className="bg-[#161616] border border-[#262626] p-3.5 rounded-lg flex items-start gap-2.5 text-[11px] text-zinc-400">
+                        <ShieldAlert className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                        <div className="leading-relaxed">
+                          <span className="font-semibold text-zinc-300 block mb-0.5">Educational Triage Disclaimer</span>
+                          {triageAnalysis.disclaimer}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* NEARBY HEALTHCARE OPERATIONS (Master-Detail Pattern with FacilityDetailView) */}
                 {selectedFacility ? (
@@ -1016,8 +1079,6 @@ export function PatientDashboard() {
                   </button>
                 </div>
               </div>
-            )}
-            </>
             )}
 
           </div>
