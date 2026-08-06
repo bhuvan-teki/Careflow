@@ -63,8 +63,11 @@ export function PatientDashboard() {
     // 1. MUST explicitly clear stale triage state immediately
     setTriageAnalysis(null);
 
-    // 2. Restore unique initial complaint
-    const title = consult.rawPatientInput || (consult.aiAnalysis?.symptoms ? consult.aiAnalysis.symptoms.join(', ') : 'Consultation Record');
+    // 2. Restore clean initial complaint title
+    let title = consult.rawPatientInput || (consult.aiAnalysis?.symptoms ? consult.aiAnalysis.symptoms.join(', ') : 'Consultation Record');
+    if (title.includes('. Patient:')) {
+      title = title.split('. Patient:')[0].replace(/^Main Complaint:\s*/i, '').trim();
+    }
     setInitialComplaint(title);
     setPhase('summary');
 
@@ -72,12 +75,12 @@ export function PatientDashboard() {
     if (consult.assessmentData && consult.assessmentData.ageGender) {
       setAssessmentData(consult.assessmentData);
     } else {
-      // Fallback parsing for legacy records
+      // Intelligently parse raw input if legacy record does not have assessmentData
       const symptomsList = consult.aiAnalysis?.symptoms?.join(', ') || title;
       setAssessmentData({
         patientType: 'Self',
         ageGender: consult.aiAnalysis?.urgency ? `${consult.aiAnalysis.urgency} Urgency Patient` : 'Adult',
-        symptomStart: consult.aiAnalysis?.duration || '1-2 Days',
+        symptomStart: consult.aiAnalysis?.duration || 'Not specified',
         severity: consult.aiAnalysis?.severity || 'Moderate',
         additionalSymptoms: symptomsList,
         medicalConditions: consult.aiAnalysis?.riskFactors?.length ? consult.aiAnalysis.riskFactors.join(', ') : 'None'
@@ -89,9 +92,10 @@ export function PatientDashboard() {
       setTriageAnalysis(consult.triageAnalysis);
     } else {
       // Re-fetch triage analysis for legacy records missing stored triageAnalysis
+      const contextDetails = `Main Complaint: ${title}. Patient Profile: ${consult.aiAnalysis?.urgency || 'Adult'}. Onset: ${consult.aiAnalysis?.duration || 'Intake Record'}.`;
       api.post('/triage/analyze', {
         symptoms: title,
-        patientDetails: consult.aiAnalysis?.duration ? `Onset: ${consult.aiAnalysis.duration}` : 'Intake Record'
+        patientDetails: contextDetails
       }).then(res => {
         if (res.data?.success && res.data?.analysis) {
           setTriageAnalysis(res.data.analysis);
@@ -111,9 +115,13 @@ export function PatientDashboard() {
         const formatted = historyRes.data.consultations.map((c: any) => {
           consultMap[c._id] = c;
           const symptomsList = c.aiAnalysis?.symptoms;
-          const displayTitle = (Array.isArray(symptomsList) && symptomsList.length > 0)
+          let displayTitle = (Array.isArray(symptomsList) && symptomsList.length > 0)
             ? symptomsList.join(', ')
             : (c.rawPatientInput || 'Medical Consultation');
+
+          if (displayTitle.includes('. Patient:')) {
+            displayTitle = displayTitle.split('. Patient:')[0].replace(/^Main Complaint:\s*/i, '').trim();
+          }
 
           return {
             id: c._id,
@@ -139,9 +147,13 @@ export function PatientDashboard() {
 
     const consult = historyConsultations[id];
     if (consult) {
+      let displayTitle = consult.rawPatientInput || 'Consultation Record';
+      if (displayTitle.includes('. Patient:')) {
+        displayTitle = displayTitle.split('. Patient:')[0].replace(/^Main Complaint:\s*/i, '').trim();
+      }
       toast({
         title: "Conversation Loaded",
-        description: `Viewing: ${(consult.rawPatientInput || 'Consultation Record').slice(0, 35)}...`,
+        description: `Viewing: ${displayTitle.slice(0, 35)}...`,
         type: "success"
       });
     }
@@ -177,10 +189,12 @@ export function PatientDashboard() {
     setPhase('summary');
     setIsAnalyzing(true);
     try {
-      // 1. First get unique AI triage analysis with ICD-10 billing code
+      const fullContext = `Main Complaint: ${initialComplaint}. Patient Profile: ${assessmentData.patientType} (${assessmentData.ageGender}). Onset & Duration: ${assessmentData.symptomStart}. Severity & Pain Character: ${assessmentData.severity}. Associated Symptoms: ${assessmentData.additionalSymptoms || 'None'}. Medical History & Medications: ${assessmentData.medicalConditions || 'None'}.`;
+
+      // 1. Send complete 6-question clinical profile to Gemini AI Triage Engine
       const triageRes = await api.post('/triage/analyze', {
         symptoms: initialComplaint,
-        patientDetails: `${assessmentData.patientType}, ${assessmentData.ageGender}, ${assessmentData.symptomStart}`
+        patientDetails: fullContext
       });
 
       let currentTriageAnalysis = null;
@@ -189,11 +203,9 @@ export function PatientDashboard() {
         setTriageAnalysis(currentTriageAnalysis);
       }
 
-      const fullNarrative = `${initialComplaint}. Patient: ${assessmentData.patientType} (${assessmentData.ageGender || 'Adult'}). Onset: ${assessmentData.symptomStart || '1-2 Days'}, Severity: ${assessmentData.severity || 'Moderate'}. Symptoms: ${assessmentData.additionalSymptoms || initialComplaint}. History: ${assessmentData.medicalConditions || 'None'}`;
-
-      // 2. Save consultation with unique assessmentData and triageAnalysis to database
+      // 2. Save consultation with complete assessmentData and triageAnalysis to database
       const wfRes = await api.post('/workflow/analyze', {
-        patientMessage: fullNarrative,
+        patientMessage: fullContext,
         patientId: user?.id || '65f1a2b3c4d5e6f7a8b9c0d1',
         consultationId: activeConsultationId || undefined,
         assessmentData,
