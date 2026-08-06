@@ -1,8 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
 import { Card, CardContent } from "../../components/ui/Card";
-import { Divider } from "../../components/ui/Divider";
-import { ArrowRight } from "lucide-react";
 import { useGoogleLogin } from '@react-oauth/google';
 import api from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
@@ -94,32 +92,6 @@ export function PortalSelector() {
               Already have an account?{" "}
               <Link to="/patient/login" className="font-medium text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border rounded-sm">
                 Login
-              </Link>
-            </p>
-          </div>
-
-          <Divider />
-
-          {/* Section 2 - Clinic / Hospital */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-medium text-white">Clinic / Hospital</h3>
-              <p className="text-sm text-text-secondary">
-                Register your clinic and manage patients with CareFlow.
-              </p>
-            </div>
-            <Button 
-              variant="secondary" 
-              className="w-full justify-center group"
-              onClick={() => navigate('/clinic/register')}
-            >
-              Register Clinic
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Button>
-            <p className="text-center text-sm text-text-secondary">
-              Already registered?{" "}
-              <Link to="/clinic/login" className="font-medium text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border rounded-sm">
-                Clinic Login
               </Link>
             </p>
           </div>

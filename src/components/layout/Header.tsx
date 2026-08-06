@@ -1,7 +1,7 @@
 import React from 'react';
-import { Share2, MoreHorizontal, PanelLeft, Building2, User } from 'lucide-react';
+import { Share2, MoreHorizontal, PanelLeft, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   title?: string;
@@ -18,9 +18,6 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const isClinicView = location.pathname.includes('/clinic');
 
   return (
     <header className="h-14 border-b border-[#2A2A2A]/60 bg-[#0A0A0A] px-4 flex items-center justify-between sticky top-0 z-10 select-none">
@@ -44,29 +41,14 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Right: View Mode Toggle, Share, User Avatar */}
       <div className="flex items-center space-x-3 shrink-0">
         
-        {/* Workspace Mode Switcher (Patient vs Clinic View) */}
+        {/* Workspace Mode Switcher (Patient View) */}
         <div className="flex items-center bg-[#141414] p-1 rounded-lg border border-[#2A2A2A]">
           <button
             onClick={() => navigate('/patient/dashboard')}
-            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all flex items-center space-x-1.5 ${
-              !isClinicView
-                ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700'
-                : 'text-zinc-400 hover:text-white'
-            }`}
+            className="px-3 py-1 text-xs font-semibold rounded-md transition-all flex items-center space-x-1.5 bg-zinc-800 text-white shadow-sm border border-zinc-700"
           >
             <User className="h-3.5 w-3.5 inline" />
             <span>Patient</span>
-          </button>
-          <button
-            onClick={() => navigate('/clinic/dashboard')}
-            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all flex items-center space-x-1.5 ${
-              isClinicView
-                ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Building2 className="h-3.5 w-3.5 inline" />
-            <span>Clinic Staff</span>
           </button>
         </div>
 
