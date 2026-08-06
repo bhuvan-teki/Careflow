@@ -53,10 +53,13 @@ app.use('/api/orders', require('./src/routes/orderRoutes'));
 // Google Maps Places API & Live GIS Nearby Facilities Discovery Route
 app.post('/api/facilities/nearby', async (req, res) => {
   try {
-    const { lat, lng, type = 'hospital' } = req.body;
+    const lat = parseFloat(req.body.lat);
+    const lng = parseFloat(req.body.lng);
+    const type = req.body.type || 'hospital';
 
-    if (!lat || !lng) {
-      return res.status(400).json({ success: false, message: 'Latitude and longitude are required.' });
+    if (isNaN(lat) || isNaN(lng)) {
+      console.error('❌ Nearby Facilities Error: Invalid lat/lng parameters', req.body);
+      return res.status(400).json({ success: false, message: 'Valid numerical latitude and longitude are required.' });
     }
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
@@ -74,8 +77,8 @@ app.post('/api/facilities/nearby', async (req, res) => {
           const results = data.results.slice(0, 4).map((place) => {
             const name = place.name;
             const vicinity = place.vicinity || 'Nearby Location';
-            const placeLat = place.geometry?.location?.lat || Number(lat);
-            const placeLng = place.geometry?.location?.lng || Number(lng);
+            const placeLat = place.geometry?.location?.lat || lat;
+            const placeLng = place.geometry?.location?.lng || lng;
             return {
               place_id: place.place_id,
               name,
@@ -95,10 +98,14 @@ app.post('/api/facilities/nearby', async (req, res) => {
             source: 'Google Places API',
             results
           });
+        } else {
+          console.error(`❌ Google Places API Status Warning: status="${data.status}"`, data.error_message || 'Zero or restricted results');
         }
       } catch (placesErr) {
-        console.warn('⚠️ Google Places API call failed:', placesErr.message);
+        console.error('❌ Google Places API Fetch Exception:', placesErr.message);
       }
+    } else {
+      console.log('ℹ️ GOOGLE_PLACES_API_KEY is not set on environment; switching to Live GIS engine.');
     }
 
     // 2. Secondary: Real Live GIS Places Discovery (Nominatim OSM)

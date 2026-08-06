@@ -87,17 +87,18 @@ export function PatientDashboard() {
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const { latitude, longitude } = position.coords;
+        const latitude = Number(position.coords.latitude);
+        const longitude = Number(position.coords.longitude);
         try {
           const [hospRes, pharmRes] = await Promise.all([
             api.post('/facilities/nearby', { lat: latitude, lng: longitude, type: 'hospital' }),
             api.post('/facilities/nearby', { lat: latitude, lng: longitude, type: 'pharmacy' })
           ]);
 
-          if (hospRes.data.success && Array.isArray(hospRes.data.results)) {
+          if (hospRes.data?.success && Array.isArray(hospRes.data?.results)) {
             setRealHospitals(hospRes.data.results);
           }
-          if (pharmRes.data.success && Array.isArray(pharmRes.data.results)) {
+          if (pharmRes.data?.success && Array.isArray(pharmRes.data?.results)) {
             setRealPharmacies(pharmRes.data.results);
             if (pharmRes.data.results.length > 0) {
               setSelectedPharmacy(pharmRes.data.results[0]);
@@ -108,15 +109,24 @@ export function PatientDashboard() {
           toast({ title: "Location Discovered!", description: "Fetched real nearby facilities around your live location.", type: "success" });
         } catch (err: any) {
           console.error("Failed to fetch nearby facilities:", err);
-          toast({ title: "Discovery Error", description: "Could not fetch nearby facilities.", type: "error" });
+          const serverErrMsg = err.response?.data?.message || err.response?.data?.error || "Could not fetch nearby facilities.";
+          toast({ title: "Discovery Error", description: serverErrMsg, type: "error" });
         } finally {
           setIsLocating(false);
         }
       },
       (error) => {
         setIsLocating(false);
-        console.error("Geolocation error:", error);
-        toast({ title: "Location Permission Denied", description: "Please allow location access to discover nearby healthcare.", type: "error" });
+        console.error("Geolocation browser error:", error);
+        let errorMsg = "Please allow location access to discover nearby healthcare.";
+        if (error.code === error.PERMISSION_DENIED) {
+          errorMsg = "Location access denied by browser. Please enable GPS permissions.";
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          errorMsg = "Location information unavailable. Please check GPS settings.";
+        } else if (error.code === error.TIMEOUT) {
+          errorMsg = "Location request timed out. Please try again.";
+        }
+        toast({ title: "Location Permission Denied", description: errorMsg, type: "error" });
       },
       { timeout: 10000, enableHighAccuracy: true }
     );
