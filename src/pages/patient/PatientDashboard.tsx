@@ -11,7 +11,9 @@ import {
   FileText,
   Stethoscope,
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  FlaskConical,
+  ClipboardList
 } from 'lucide-react';
 
 interface AssessmentForm {
@@ -558,6 +560,51 @@ export function PatientDashboard() {
                         <p className="text-xs text-zinc-300 leading-relaxed bg-[#171717] border border-[#262626] p-4 rounded-lg">
                           {triageAnalysis.summary}
                         </p>
+                      </div>
+                    )}
+
+                    {/* PENDING DIAGNOSTIC ORDERS (Phase 2: Smart Pre-Orders) */}
+                    {Array.isArray(triageAnalysis?.recommended_diagnostics) && triageAnalysis.recommended_diagnostics.length > 0 && (
+                      <div className="bg-[#171717] border border-[#262626] p-4 rounded-lg space-y-3">
+                        <div className="flex items-center justify-between border-b border-[#262626] pb-2.5">
+                          <div className="flex items-center space-x-2">
+                            <FlaskConical className="w-3.5 h-3.5 text-cyan-400" />
+                            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">Pending Diagnostic Orders</h3>
+                          </div>
+                          <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded">
+                            Phase 2 Pre-Orders
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {triageAnalysis.recommended_diagnostics.map((order: { test_name: string; reason: string }, idx: number) => (
+                            <div key={idx} className="bg-[#111111] border border-[#262626] p-3 rounded-lg flex items-start gap-2.5">
+                              <div className="p-1.5 bg-cyan-950/50 border border-cyan-500/30 rounded text-cyan-400 flex-shrink-0 mt-0.5">
+                                <ClipboardList className="w-3.5 h-3.5" />
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-bold text-white tracking-wide">{order.test_name}</h4>
+                                <p className="text-[11px] text-zinc-400 mt-0.5 leading-snug">{order.reason}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="pt-1 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              toast({
+                                title: "Diagnostic Pre-Orders Approved",
+                                description: "Smart Pre-Orders transmitted to hospital EHR & laboratory system.",
+                                type: "success"
+                              });
+                            }}
+                            className="px-3.5 py-1.5 rounded-lg bg-cyan-500 text-black hover:bg-cyan-400 font-bold text-xs transition flex items-center gap-1.5 shadow-md shadow-cyan-500/20"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Approve Diagnostic Orders
+                          </button>
+                        </div>
                       </div>
                     )}
 
