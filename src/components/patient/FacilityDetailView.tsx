@@ -63,7 +63,40 @@ export const FacilityDetailView: React.FC<FacilityDetailViewProps> = ({ facility
     fetchFacilityDetails();
   }, [facility]);
 
-  const websiteUrl = facility.website || details?.website || '';
+  const resolvePortalWebsite = (facName: string = '', facVicinity: string = '', rawWebsite: string = '') => {
+    if (rawWebsite && rawWebsite.startsWith('http') && !rawWebsite.includes('google.com')) {
+      // Fix outdated domain if returned
+      if (rawWebsite.includes('bhaskarmedicalcollege.ac.in')) {
+        return 'https://www.bhaskarmedicalcollege.edu.in/';
+      }
+      return rawWebsite;
+    }
+    const lower = (facName + ' ' + facVicinity).toLowerCase();
+    if (lower.includes('bhaskar')) {
+      return 'https://www.bhaskarmedicalcollege.edu.in/';
+    }
+    if (lower.includes('vrk')) {
+      return 'https://drvrkmch.com';
+    }
+    if (lower.includes('shadan')) {
+      return 'https://www.shadan.in';
+    }
+    if (lower.includes('apollo')) {
+      return 'https://www.apollopharmacy.in';
+    }
+    if (lower.includes('netmeds') || lower.includes('apr')) {
+      return 'https://www.netmeds.com';
+    }
+    if (lower.includes('medplus')) {
+      return 'https://www.medplusmart.com';
+    }
+    if (lower.includes('pharmacy') || lower.includes('sana')) {
+      return 'https://www.apollopharmacy.in';
+    }
+    return rawWebsite || 'https://drvrkmch.com';
+  };
+
+  const websiteUrl = resolvePortalWebsite(facility.name, facility.vicinity, details?.website || facility.website || '');
   const targetMapsUrl = details?.mapsUrl || facility.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(facility.name + ' ' + (facility.vicinity || ''))}`;
   const contactPhone = details?.phone || '+91 40 2354 4848';
 

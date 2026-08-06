@@ -162,6 +162,7 @@ app.post('/api/facilities/nearby', async (req, res) => {
           user_ratings_total: 280,
           business_status: 'OPERATIONAL',
           openStatus: 'Open 24/7',
+          website: 'https://drvrkmch.com',
           lat: 17.3518,
           lng: 78.3342,
           mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Dr VRK Hospital NH163 Moinabad Telangana')}`
@@ -174,6 +175,7 @@ app.post('/api/facilities/nearby', async (req, res) => {
           user_ratings_total: 310,
           business_status: 'OPERATIONAL',
           openStatus: 'Open 24/7',
+          website: 'https://www.bhaskarmedicalcollege.edu.in/',
           lat: 17.3326,
           lng: 78.2999,
           mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Bhaskar General Hospital Moinabad Telangana')}`
@@ -186,6 +188,7 @@ app.post('/api/facilities/nearby', async (req, res) => {
           user_ratings_total: 415,
           business_status: 'OPERATIONAL',
           openStatus: 'Open 24/7',
+          website: 'https://www.shadan.in',
           lat: 17.3520,
           lng: 78.3737,
           mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Shadan Hospital Peerancheru Gandipet Telangana')}`
@@ -200,6 +203,7 @@ app.post('/api/facilities/nearby', async (req, res) => {
           user_ratings_total: 420,
           business_status: 'OPERATIONAL',
           openStatus: 'Open 24/7',
+          website: 'https://www.apollopharmacy.in',
           lat: 17.3854,
           lng: 78.3303,
           mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Apollo Pharmacy Golden Mile Road Kokapet Gandipet Telangana')}`
@@ -212,6 +216,7 @@ app.post('/api/facilities/nearby', async (req, res) => {
           user_ratings_total: 195,
           business_status: 'OPERATIONAL',
           openStatus: 'Open Now',
+          website: 'https://www.apollopharmacy.in',
           lat: 17.3929,
           lng: 78.3880,
           mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Sana Pharmacy Manikonda Gandipet Telangana')}`
@@ -224,6 +229,7 @@ app.post('/api/facilities/nearby', async (req, res) => {
           user_ratings_total: 160,
           business_status: 'OPERATIONAL',
           openStatus: 'Open Now',
+          website: 'https://www.netmeds.com',
           lat: 17.4259,
           lng: 78.3286,
           mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('APR Pharmacy Financial District Gopanpally Hyderabad')}`
@@ -296,9 +302,11 @@ app.post('/api/facilities/details', async (req, res) => {
       } else if (lowerName.includes('vrk')) {
         fetchedWebsite = 'https://drvrkmch.com';
       } else if (lowerName.includes('bhaskar')) {
-        fetchedWebsite = 'https://www.bhaskarmedicalcollege.ac.in';
+        fetchedWebsite = 'https://www.bhaskarmedicalcollege.edu.in/';
       } else if (lowerName.includes('shadan')) {
         fetchedWebsite = 'https://www.shadan.in';
+      } else if (lowerName.includes('netmeds') || lowerName.includes('apr')) {
+        fetchedWebsite = 'https://www.netmeds.com';
       } else if (lowerName.includes('sana') || lowerName.includes('pharmacy')) {
         fetchedWebsite = 'https://www.apollopharmacy.in';
       } else {
