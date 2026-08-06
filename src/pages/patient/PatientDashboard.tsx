@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
 import { FacilityDetailView } from '../../components/patient/FacilityDetailView';
@@ -7,12 +7,9 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../lib/api';
 import { 
   Activity, 
-  Building2, 
   ShoppingBag, 
   MapPin, 
-  Clock, 
   CheckCircle2, 
-  ShieldAlert, 
   Plus, 
   Minus, 
   CreditCard, 
@@ -20,9 +17,6 @@ import {
   KeyRound, 
   Sparkles, 
   Send,
-  User,
-  Calendar,
-  AlertTriangle,
   FileText
 } from 'lucide-react';
 
@@ -140,8 +134,6 @@ export function PatientDashboard() {
   const [otpInput, setOtpInput] = useState('');
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -182,7 +174,7 @@ export function PatientDashboard() {
         patientId: user?.id || '65f1a2b3c4d5e6f7a8b9c0d1'
       });
       if (res.data.success) {
-        fetchHistory();
+        fetchInitialData();
       }
     } catch (err) {
       console.error('Failed to save consultation to database:', err);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Star, Phone, Bot, Send, ShieldCheck, Building2, Globe, MapPin } from 'lucide-react';
+import api from '../../lib/api';
 
 interface Facility {
   place_id: string;
@@ -35,16 +36,12 @@ export const FacilityDetailView: React.FC<FacilityDetailViewProps> = ({ facility
     const fetchFacilityDetails = async () => {
       setLoading(true);
       try {
-        const res = await fetch('http://localhost:5000/api/facilities/details', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            place_id: facility.place_id,
-            name: facility.name,
-            vicinity: facility.vicinity
-          })
+        const res = await api.post('/facilities/details', {
+          place_id: facility.place_id,
+          name: facility.name,
+          vicinity: facility.vicinity
         });
-        const data = await res.json();
+        const data = res.data;
         if (data.success && data.details) {
           setDetails(data.details);
           setChatMessages([
