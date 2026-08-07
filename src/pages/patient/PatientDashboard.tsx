@@ -11,7 +11,8 @@ import {
   FileText,
   Stethoscope,
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  Printer
 } from 'lucide-react';
 
 interface AssessmentForm {
@@ -477,9 +478,18 @@ export function PatientDashboard() {
                       <FileText className="h-4 w-4 text-white" />
                       <h2 className="text-sm font-semibold tracking-wide text-white uppercase">Executive Clinical Triage Summary</h2>
                     </div>
-                    <span className="text-[11px] font-medium text-zinc-400 bg-zinc-800/60 border border-zinc-700/50 px-2.5 py-1 rounded">
-                      Clinical Intake Complete
-                    </span>
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => window.print()}
+                        className="text-xs bg-zinc-800 hover:bg-zinc-700 text-white font-medium px-3 py-1.5 rounded-lg border border-zinc-700 transition flex items-center gap-1.5 shadow-sm print:hidden"
+                      >
+                        <Printer className="w-3.5 h-3.5" /> Download PDF
+                      </button>
+                      <span className="text-[11px] font-medium text-zinc-400 bg-zinc-800/60 border border-zinc-700/50 px-2.5 py-1 rounded">
+                        Clinical Intake Complete
+                      </span>
+                    </div>
                   </div>
 
                   {/* Sleek 6-Column Operational Grid */}

@@ -251,11 +251,12 @@ CLINICAL INTAKE PROFILE:
 
 CRITICAL INSTRUCTIONS:
 1. Synthesize ALL provided details (main complaint, duration, severity, associated symptoms, medical conditions).
-2. DO NOT assign low urgency or generic cold advice if severe, chronic, or high-risk conditions are reported (e.g. lung cancer, low urination/anuria, severe pain, shortness of breath, high fever).
-3. Formulate the EXACT, most accurate ICD-10 diagnostic billing code matching their primary clinical presentation (e.g. C34.9 for Lung Cancer, R34 for Anuria, R07.9 for Chest Pain, M54.5 for Low Back Pain, R50.9 for Fever, J06.9 ONLY for minor cold).
-4. Classify triage_level as "Low", "Moderate", "Urgent", or "Emergency".
-5. Assign recommended_pathway as "General Physician" | "Cardiology" | "Pulmonology" | "Neurology" | "Orthopedics" | "Nephrology" | "Oncology" | "Emergency Medicine".
-6. Return a raw, valid JSON object ONLY matching this schema without markdown code blocks, backticks (\`\`\`json), or conversational text:
+2. MULTILINGUAL ACCESSIBILITY: No matter what language the user inputs their symptoms in (e.g. Hindi, Spanish, Telugu, French, German), you MUST output the final JSON executive_summary, summary, and icd_10_description strictly in professional Medical English.
+3. DO NOT assign low urgency or generic cold advice if severe, chronic, or high-risk conditions are reported (e.g. lung cancer, low urination/anuria, severe pain, shortness of breath, high fever).
+4. Formulate the EXACT, most accurate ICD-10 diagnostic billing code matching their primary clinical presentation (e.g. C34.9 for Lung Cancer, R34 for Anuria, R07.9 for Chest Pain, M54.5 for Low Back Pain, R50.9 for Fever, J06.9 ONLY for minor cold).
+5. Classify triage_level as "Low", "Moderate", "Urgent", or "Emergency".
+6. Assign recommended_pathway as "General Physician" | "Cardiology" | "Pulmonology" | "Neurology" | "Orthopedics" | "Nephrology" | "Oncology" | "Emergency Medicine".
+7. Return a raw, valid JSON object ONLY matching this schema without markdown code blocks, backticks (```json), or conversational text:
 
 REQUIRED JSON SCHEMA:
 {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, AlertTriangle, CheckCircle2, ShieldAlert, Sparkles, Loader2, Stethoscope, ArrowRight, RefreshCw } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, ShieldAlert, Sparkles, Loader2, Stethoscope, ArrowRight, RefreshCw, Printer } from 'lucide-react';
 import api from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 
@@ -200,7 +200,14 @@ export const SymptomTriageCard: React.FC = () => {
                 </span>
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-right flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="text-xs bg-zinc-800 hover:bg-zinc-700 text-white font-medium px-3 py-1.5 rounded-lg border border-zinc-700 transition flex items-center gap-1.5 shadow-sm print:hidden"
+              >
+                <Printer className="w-3.5 h-3.5" /> Download PDF
+              </button>
               <span className="text-xs text-zinc-500">Evaluated by CareFlow AI Assistant</span>
             </div>
           </div>
