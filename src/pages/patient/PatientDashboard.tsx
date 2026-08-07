@@ -630,6 +630,8 @@ export function PatientDashboard() {
                 {/* AI EDUCATIONAL TRIAGE EVALUATION RESULTS */}
                 {triageAnalysis && (
                   <div className="bg-[#121212] border border-[#262626] rounded-xl p-6 space-y-6">
+                    
+                    {/* STEP 1: AI Educational Triage Summary */}
                     <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#262626] pb-4">
                       <div>
                         <span className="text-xs uppercase tracking-wider text-zinc-400 font-semibold">Triage Severity Evaluation</span>
@@ -652,111 +654,47 @@ export function PatientDashboard() {
                       </div>
                     )}
 
-                    {/* Automated Hospital Dispatch Email */}
-                    {triageAnalysis?.hospital_handoff_email && (
-                      <div className="bg-[#171717] border border-emerald-500/30 p-4 rounded-lg space-y-3 shadow-lg shadow-emerald-950/20">
-                        <div className="flex items-center justify-between border-b border-[#262626] pb-2.5">
-                          <div className="flex items-center space-x-2">
-                            <Mail className="w-3.5 h-3.5 text-emerald-400" />
-                            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">Automated Hospital Dispatch</h3>
-                          </div>
-                          <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded">
-                            Ready to Send
-                          </span>
-                        </div>
-
-                        <textarea
-                          readOnly
-                          rows={6}
-                          value={triageAnalysis.hospital_handoff_email}
-                          className="w-full bg-[#111111] border border-[#262626] rounded-lg p-3 text-xs font-mono text-zinc-200 focus:outline-none resize-none leading-relaxed"
-                        />
-
-                        <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(triageAnalysis.hospital_handoff_email || '');
-                              toast({
-                                title: "Copied to Clipboard",
-                                description: "Hospital handoff email report copied successfully.",
-                                type: "success"
-                              });
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-[#222222] hover:bg-zinc-800 text-white font-medium text-xs border border-[#333333] transition flex items-center gap-1.5"
-                          >
-                            <Copy className="w-3.5 h-3.5" /> Copy Email
-                          </button>
-                          <a
-                            href={`mailto:triage@hospital.com?subject=${encodeURIComponent('CareFlow Patient Triage Handoff Report')}&body=${encodeURIComponent(triageAnalysis.hospital_handoff_email)}`}
-                            className="px-3.5 py-1.5 rounded-lg bg-emerald-500 text-black hover:bg-emerald-400 font-bold text-xs transition flex items-center gap-1.5 shadow-md shadow-emerald-500/20"
-                          >
-                            <Mail className="w-3.5 h-3.5" /> Send Handoff Email
-                          </a>
+                    {Array.isArray(triageAnalysis.differentialDiagnoses) && triageAnalysis.differentialDiagnoses.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-xs font-semibold text-zinc-300 flex items-center gap-2">
+                          <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                          Potential Educational Differential Diagnoses
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {triageAnalysis.differentialDiagnoses.map((diag: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2.5 bg-[#171717] border border-[#262626] p-3 rounded-lg text-xs text-zinc-200">
+                              <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
+                              <span>{diag}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
 
-                    {/* Attach Medical Records UI (Optional) */}
-                    <div className="bg-[#171717] border border-purple-500/30 p-4 rounded-lg space-y-3 shadow-lg shadow-purple-950/20">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2.5">
-                          <Paperclip className="w-4 h-4 text-purple-400" />
-                          <div>
-                            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">Attach Medical Records & Photos (Optional)</h3>
-                            <p className="text-[11px] text-zinc-400 mt-0.5">
-                              Upload lab receipts, rash photos, or previous prescriptions to attach to your secure SMS & triage dispatch.
-                            </p>
-                          </div>
+                    {triageAnalysis.recommendedAction && (
+                      <div className="space-y-2">
+                        <h3 className="text-xs font-semibold text-zinc-300 flex items-center gap-2">
+                          <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
+                          Recommended Next Action
+                        </h3>
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-lg text-xs font-medium text-emerald-300 flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <div>{triageAnalysis.recommendedAction}</div>
                         </div>
-                        <span className="text-[10px] font-mono font-bold text-purple-400 bg-purple-950/60 border border-purple-500/30 px-2 py-0.5 rounded">
-                          Secure File Vault
-                        </span>
                       </div>
+                    )}
 
-                      <div className="flex flex-col sm:flex-row items-center gap-3 pt-0.5">
-                        <label className="cursor-pointer w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition shadow-md shadow-purple-600/20">
-                          <Upload className="w-4 h-4" /> Attach Medical Files
-                          <input
-                            type="file"
-                            multiple
-                            className="hidden"
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files.length > 0) {
-                                const names = Array.from(e.target.files).map(f => f.name);
-                                setAttachedFiles(prev => [...prev, ...names]);
-                                toast({
-                                  title: "Files Attached",
-                                  description: `Attached ${names.length} record(s) to secure triage dispatch.`,
-                                  type: "success"
-                                });
-                              }
-                            }}
-                          />
-                        </label>
-
-                        {attachedFiles.length > 0 ? (
-                          <div className="flex flex-wrap gap-2 items-center">
-                            {attachedFiles.map((file, i) => (
-                              <span key={i} className="inline-flex items-center gap-1.5 text-[11px] font-mono font-medium px-2.5 py-1 rounded-md bg-purple-950/80 text-purple-300 border border-purple-500/30">
-                                <FileText className="w-3 h-3 text-purple-400" /> {file}
-                              </span>
-                            ))}
-                            <button
-                              type="button"
-                              onClick={() => setAttachedFiles([])}
-                              className="text-[10px] text-zinc-500 hover:text-zinc-300 underline font-mono"
-                            >
-                              Clear All
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-zinc-500 italic">No files selected yet (Optional)</span>
-                        )}
+                    {triageAnalysis.disclaimer && (
+                      <div className="bg-[#161616] border border-[#262626] p-3.5 rounded-lg flex items-start gap-2.5 text-[11px] text-zinc-400">
+                        <ShieldAlert className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                        <div className="leading-relaxed">
+                          <span className="font-semibold text-zinc-300 block mb-0.5">Educational Triage Disclaimer</span>
+                          {triageAnalysis.disclaimer}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                    {/* Real-Time 5km Google Places Location Discovery Service */}
+                    {/* STEP 2: NEARBY HEALTHCARE DISCOVERY */}
                     <div className="bg-[#171717] border border-blue-500/30 p-4 rounded-lg space-y-4 shadow-lg shadow-blue-950/20">
                       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#262626] pb-3">
                         <div className="flex items-center space-x-2.5">
@@ -867,45 +805,115 @@ export function PatientDashboard() {
                       )}
                     </div>
 
-                    {Array.isArray(triageAnalysis.differentialDiagnoses) && triageAnalysis.differentialDiagnoses.length > 0 && (
-                      <div className="space-y-2">
-                        <h3 className="text-xs font-semibold text-zinc-300 flex items-center gap-2">
-                          <Activity className="w-3.5 h-3.5 text-emerald-400" />
-                          Potential Educational Differential Diagnoses
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {triageAnalysis.differentialDiagnoses.map((diag: string, idx: number) => (
-                            <div key={idx} className="flex items-center gap-2.5 bg-[#171717] border border-[#262626] p-3 rounded-lg text-xs text-zinc-200">
-                              <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
-                              <span>{diag}</span>
+                    {/* PROGRESSIVE DISCLOSURE: STEPS 3 & 4 (Render ONLY if nearby places discovered) */}
+                    {nearbyPlaces && nearbyPlaces.length > 0 && (
+                      <>
+                        {/* STEP 3: ATTACH MEDICAL RECORDS UI (Optional) */}
+                        <div className="bg-[#171717] border border-purple-500/30 p-4 rounded-lg space-y-3 shadow-lg shadow-purple-950/20 animate-in fade-in duration-300">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2.5">
+                              <Paperclip className="w-4 h-4 text-purple-400" />
+                              <div>
+                                <h3 className="text-xs font-semibold text-white uppercase tracking-wider">Attach Medical Records & Photos (Optional)</h3>
+                                <p className="text-[11px] text-zinc-400 mt-0.5">
+                                  Upload lab receipts, rash photos, or previous prescriptions to attach to your secure SMS & triage dispatch.
+                                </p>
+                              </div>
                             </div>
-                          ))}
+                            <span className="text-[10px] font-mono font-bold text-purple-400 bg-purple-950/60 border border-purple-500/30 px-2 py-0.5 rounded">
+                              Secure File Vault
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row items-center gap-3 pt-0.5">
+                            <label className="cursor-pointer w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition shadow-md shadow-purple-600/20">
+                              <Upload className="w-4 h-4" /> Attach Medical Files
+                              <input
+                                type="file"
+                                multiple
+                                className="hidden"
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files.length > 0) {
+                                    const names = Array.from(e.target.files).map(f => f.name);
+                                    setAttachedFiles(prev => [...prev, ...names]);
+                                    toast({
+                                      title: "Files Attached",
+                                      description: `Attached ${names.length} record(s) to secure triage dispatch.`,
+                                      type: "success"
+                                    });
+                                  }
+                                }}
+                              />
+                            </label>
+
+                            {attachedFiles.length > 0 ? (
+                              <div className="flex flex-wrap gap-2 items-center">
+                                {attachedFiles.map((file, i) => (
+                                  <span key={i} className="inline-flex items-center gap-1.5 text-[11px] font-mono font-medium px-2.5 py-1 rounded-md bg-purple-950/80 text-purple-300 border border-purple-500/30">
+                                    <FileText className="w-3 h-3 text-purple-400" /> {file}
+                                  </span>
+                                ))}
+                                <button
+                                  type="button"
+                                  onClick={() => setAttachedFiles([])}
+                                  className="text-[10px] text-zinc-500 hover:text-zinc-300 underline font-mono"
+                                >
+                                  Clear All
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-zinc-500 italic">No files selected yet (Optional)</span>
+                            )}
+                          </div>
                         </div>
-                      </div>
+
+                        {/* STEP 4: AUTOMATED HOSPITAL DISPATCH */}
+                        {triageAnalysis?.hospital_handoff_email && (
+                          <div className="bg-[#171717] border border-emerald-500/30 p-4 rounded-lg space-y-3 shadow-lg shadow-emerald-950/20 animate-in fade-in duration-300">
+                            <div className="flex items-center justify-between border-b border-[#262626] pb-2.5">
+                              <div className="flex items-center space-x-2">
+                                <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                                <h3 className="text-xs font-semibold text-white uppercase tracking-wider">Automated Hospital Dispatch</h3>
+                              </div>
+                              <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded">
+                                Ready to Send
+                              </span>
+                            </div>
+
+                            <textarea
+                              readOnly
+                              rows={6}
+                              value={triageAnalysis.hospital_handoff_email}
+                              className="w-full bg-[#111111] border border-[#262626] rounded-lg p-3 text-xs font-mono text-zinc-200 focus:outline-none resize-none leading-relaxed"
+                            />
+
+                            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(triageAnalysis.hospital_handoff_email || '');
+                                  toast({
+                                    title: "Copied to Clipboard",
+                                    description: "Hospital handoff email report copied successfully.",
+                                    type: "success"
+                                  });
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-[#222222] hover:bg-zinc-800 text-white font-medium text-xs border border-[#333333] transition flex items-center gap-1.5"
+                              >
+                                <Copy className="w-3.5 h-3.5" /> Copy Email
+                              </button>
+                              <a
+                                href={`mailto:triage@hospital.com?subject=${encodeURIComponent('CareFlow Patient Triage Handoff Report')}&body=${encodeURIComponent(triageAnalysis.hospital_handoff_email)}`}
+                                className="px-3.5 py-1.5 rounded-lg bg-emerald-500 text-black hover:bg-emerald-400 font-bold text-xs transition flex items-center gap-1.5 shadow-md shadow-emerald-500/20"
+                              >
+                                <Mail className="w-3.5 h-3.5" /> Send Handoff Email
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
 
-                    {triageAnalysis.recommendedAction && (
-                      <div className="space-y-2">
-                        <h3 className="text-xs font-semibold text-zinc-300 flex items-center gap-2">
-                          <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
-                          Recommended Next Action
-                        </h3>
-                        <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-lg text-xs font-medium text-emerald-300 flex items-start gap-2.5">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                          <div>{triageAnalysis.recommendedAction}</div>
-                        </div>
-                      </div>
-                    )}
-
-                    {triageAnalysis.disclaimer && (
-                      <div className="bg-[#161616] border border-[#262626] p-3.5 rounded-lg flex items-start gap-2.5 text-[11px] text-zinc-400">
-                        <ShieldAlert className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                        <div className="leading-relaxed">
-                          <span className="font-semibold text-zinc-300 block mb-0.5">Educational Triage Disclaimer</span>
-                          {triageAnalysis.disclaimer}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
 
