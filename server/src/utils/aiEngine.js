@@ -238,7 +238,7 @@ Return ONLY valid JSON matching this structure:
 }
 
 /**
- * Live Educational AI Symptom Triage & Assessment with Automated ICD-10 Medical Coding & Smart Diagnostic Pre-Orders
+ * Live Educational AI Symptom Triage & Assessment with Automated ICD-10 Medical Coding
  */
 async function analyzeSymptomTriage(symptoms, patientDetails = '') {
   const prompt = `
@@ -255,8 +255,7 @@ CRITICAL INSTRUCTIONS:
 3. Formulate the EXACT, most accurate ICD-10 diagnostic billing code matching their primary clinical presentation (e.g. C34.9 for Lung Cancer, R34 for Anuria, R07.9 for Chest Pain, M54.5 for Low Back Pain, R50.9 for Fever, J06.9 ONLY for minor cold).
 4. Classify triage_level as "Low", "Moderate", "Urgent", or "Emergency".
 5. Assign recommended_pathway as "General Physician" | "Cardiology" | "Pulmonology" | "Neurology" | "Orthopedics" | "Nephrology" | "Oncology" | "Emergency Medicine".
-6. Generate 1 to 3 highly relevant clinical pre-order diagnostic tests in recommended_diagnostics (e.g. Complete Blood Count, Chest CT Scan, Renal Panel, ECG) with medical rationale, or leave as empty array [] if none needed.
-7. Return a raw, valid JSON object ONLY matching this schema without markdown code blocks, backticks (\`\`\`json), or conversational text:
+6. Return a raw, valid JSON object ONLY matching this schema without markdown code blocks, backticks (\`\`\`json), or conversational text:
 
 REQUIRED JSON SCHEMA:
 {
@@ -267,10 +266,6 @@ REQUIRED JSON SCHEMA:
     "icd_10_code": "e.g., C34.9, R34, R07.9, M54.5",
     "icd_10_description": "Official medical ICD-10 description"
   },
-  "recommended_diagnostics": [
-    { "test_name": "Complete Blood Count (CBC)", "reason": "To check for systemic infection or anemia" },
-    { "test_name": "High-Resolution Chest CT Scan", "reason": "To evaluate lung condition and thoracic lesions" }
-  ],
   "severity": "Low" | "Moderate" | "Urgent" | "Emergency",
   "summary": "Brief summary of symptom evaluation",
   "differentialDiagnoses": ["Condition A", "Condition B", "Condition C"],
@@ -314,11 +309,6 @@ REQUIRED JSON SCHEMA:
         icd_10_code: icdCode,
         icd_10_description: icdDesc
       },
-      recommended_diagnostics: Array.isArray(parsed.recommended_diagnostics) && parsed.recommended_diagnostics.length > 0
-        ? parsed.recommended_diagnostics
-        : [
-            { test_name: "Complete Blood Count (CBC)", reason: "To screen for systemic infection or inflammatory marker changes" }
-          ],
       severity: parsed.severity || parsed.triage_level || 'Moderate',
       summary: parsed.summary || parsed.executive_summary || `Symptom evaluation for: ${symptoms}`,
       differentialDiagnoses: Array.isArray(parsed.differentialDiagnoses) && parsed.differentialDiagnoses.length > 0
@@ -337,9 +327,6 @@ REQUIRED JSON SCHEMA:
     let pathway = 'General Physician';
     let icdCode = 'R69';
     let icdDesc = 'Illness, unspecified';
-    let diagnostics = [
-      { test_name: "Complete Blood Count (CBC)", reason: "To evaluate baseline systemic inflammatory markers" }
-    ];
 
     if (lower.includes('cancer') || lower.includes('tumor') || lower.includes('neoplasm') || lower.includes('oncology')) {
       severity = 'Urgent';
@@ -348,10 +335,6 @@ REQUIRED JSON SCHEMA:
       diagnoses = ['Pulmonary Neoplasm / Lung Cancer', 'Bronchial Lesion', 'Thoracic Mass Evaluation'];
       icdCode = 'C34.9';
       icdDesc = 'Malignant neoplasm of bronchus or lung, unspecified';
-      diagnostics = [
-        { test_name: "Contrast-Enhanced Thoracic CT Scan", reason: "To evaluate bronchial lesion morphology, size, and thoracic lymph nodes" },
-        { test_name: "Complete Blood Count (CBC) with Differential", reason: "To assess baseline hematologic parameters and rule out paraneoplastic anemia" }
-      ];
     } else if (lower.includes('urination') || lower.includes('urine') || lower.includes('anuria') || lower.includes('oliguria') || lower.includes('kidney')) {
       severity = 'Urgent';
       pathway = 'Nephrology';
@@ -359,10 +342,6 @@ REQUIRED JSON SCHEMA:
       diagnoses = ['Oliguria / Anuria (Low Urination)', 'Acute Renal Dysfunction', 'Urinary Tract Impairment'];
       icdCode = 'R34';
       icdDesc = 'Anuria and oliguria';
-      diagnostics = [
-        { test_name: "Renal Function Panel (Serum Creatinine & BUN)", reason: "To assess acute kidney filtration capacity and azotemia" },
-        { test_name: "Urinalysis with Microscopic Exam", reason: "To evaluate urinary sediment, protein excretion, and cellular casts" }
-      ];
     } else if (lower.includes('chest pain') || lower.includes('shortness of breath') || lower.includes('stroke') || lower.includes('severe bleeding')) {
       severity = 'Emergency';
       pathway = 'Emergency Medicine';
@@ -370,10 +349,6 @@ REQUIRED JSON SCHEMA:
       diagnoses = ['Acute Coronary Event', 'Severe Respiratory Distress', 'Emergency Medical Condition'];
       icdCode = 'R07.9';
       icdDesc = 'Chest pain, unspecified';
-      diagnostics = [
-        { test_name: "12-Lead Electrocardiogram (ECG)", reason: "To rule out acute myocardial ischemia or ST-segment elevation" },
-        { test_name: "High-Sensitivity Cardiac Troponin I", reason: "To detect myocardial necrosis or ischemic tissue injury" }
-      ];
     } else if (lower.includes('fever') || lower.includes('pyrexia')) {
       severity = 'Moderate';
       pathway = 'General Physician';
@@ -381,10 +356,6 @@ REQUIRED JSON SCHEMA:
       diagnoses = ['Pyrexia of Unknown Origin', 'Systemic Febrile Syndrome'];
       icdCode = 'R50.9';
       icdDesc = 'Fever, unspecified';
-      diagnostics = [
-        { test_name: "Complete Blood Count (CBC)", reason: "To check for leukocytosis and underlying viral or bacterial infection" },
-        { test_name: "C-Reactive Protein (CRP)", reason: "To measure systemic acute-phase inflammatory activity" }
-      ];
     }
 
     return {
@@ -395,7 +366,6 @@ REQUIRED JSON SCHEMA:
         icd_10_code: icdCode,
         icd_10_description: icdDesc
       },
-      recommended_diagnostics: diagnostics,
       severity,
       summary: `Educational triage for reported symptoms ("${symptoms}").`,
       differentialDiagnoses: diagnoses,

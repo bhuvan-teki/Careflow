@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
-import { Activity, AlertTriangle, CheckCircle2, ShieldAlert, Sparkles, Loader2, Stethoscope, ArrowRight, RefreshCw, FlaskConical, ClipboardList } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, ShieldAlert, Sparkles, Loader2, Stethoscope, ArrowRight, RefreshCw } from 'lucide-react';
 import api from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
-
-export interface DiagnosticOrder {
-  test_name: string;
-  reason: string;
-}
 
 export interface TriageAnalysis {
   severity: 'Low' | 'Moderate' | 'Urgent' | 'Emergency';
@@ -18,7 +13,6 @@ export interface TriageAnalysis {
     icd_10_code: string;
     icd_10_description: string;
   };
-  recommended_diagnostics?: DiagnosticOrder[];
   differentialDiagnoses: string[];
   recommendedAction: string;
   disclaimer: string;
@@ -235,51 +229,6 @@ export const SymptomTriageCard: React.FC = () => {
                 <span className="text-sm text-zinc-200 font-medium">
                   — {analysis.billing_data.icd_10_description || 'Unspecified Medical Condition'}
                 </span>
-              </div>
-            </div>
-          )}
-
-          {/* Pending Diagnostic Orders (Phase 2) */}
-          {Array.isArray(analysis?.recommended_diagnostics) && analysis.recommended_diagnostics.length > 0 && (
-            <div className="bg-zinc-900/90 border border-cyan-500/30 p-5 rounded-xl space-y-4 shadow-lg shadow-cyan-950/20">
-              <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
-                <div className="flex items-center space-x-2.5">
-                  <FlaskConical className="w-4 h-4 text-cyan-400" />
-                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">Pending Diagnostic Orders</h3>
-                </div>
-                <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded">
-                  Phase 2 Pre-Orders
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {analysis.recommended_diagnostics.map((order, idx) => (
-                  <div key={idx} className="bg-zinc-950/80 border border-zinc-800/80 p-3.5 rounded-xl flex items-start gap-3">
-                    <div className="p-2 bg-cyan-950/50 border border-cyan-500/30 rounded-lg text-cyan-400 flex-shrink-0 mt-0.5">
-                      <ClipboardList className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-white tracking-wide">{order.test_name}</h4>
-                      <p className="text-[11px] text-zinc-400 mt-1 leading-snug">{order.reason}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="pt-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    toast({
-                      title: "Diagnostic Orders Approved",
-                      description: "Pre-orders transmitted to hospital EHR & laboratory system.",
-                      type: "success"
-                    });
-                  }}
-                  className="px-4 py-2 rounded-xl bg-cyan-500 text-black hover:bg-cyan-400 font-bold text-xs transition flex items-center gap-2 shadow-md shadow-cyan-500/20"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Approve Diagnostic Orders
-                </button>
               </div>
             </div>
           )}
