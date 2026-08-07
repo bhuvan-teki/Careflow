@@ -418,10 +418,10 @@ exports.getNearbyPlaces = async (req, res) => {
           headers: {
             'Content-Type': 'application/json',
             'X-Goog-Api-Key': apiKey,
-            'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.googleMapsUri,places.distanceMeters,places.location'
+            'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.websiteUri,places.nationalPhoneNumber,places.googleMapsUri'
           },
           body: JSON.stringify({
-            includedTypes: ['hospital', 'medical_clinic', 'urgent_care_center'],
+            includedTypes: ['hospital', 'medical_clinic', 'medical_center'],
             maxResultCount: 10,
             locationRestriction: {
               circle: {
@@ -429,7 +429,7 @@ exports.getNearbyPlaces = async (req, res) => {
                   latitude: userLat,
                   longitude: userLng
                 },
-                radius: 1000.0 // Strictly 1 Kilometer (1000m)
+                radius: 5000.0 // 5 Kilometers
               }
             }
           })
@@ -440,9 +440,10 @@ exports.getNearbyPlaces = async (req, res) => {
           if (Array.isArray(data.places) && data.places.length > 0) {
             places = data.places.map(p => ({
               name: p.displayName?.text || 'Nearby Medical Center',
-              address: p.formattedAddress || `Within 1km of (${userLat.toFixed(3)}, ${userLng.toFixed(3)})`,
-              phone: p.nationalPhoneNumber || 'Contact via Google Maps',
-              distanceMeters: p.distanceMeters || Math.round(Math.random() * 500 + 200),
+              address: p.formattedAddress || `Within 5km of (${userLat.toFixed(3)}, ${userLng.toFixed(3)})`,
+              phone: p.nationalPhoneNumber || null,
+              nationalPhoneNumber: p.nationalPhoneNumber || null,
+              websiteUri: p.websiteUri || null,
               googleMapsUri: p.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((p.displayName?.text || 'Hospital') + ' ' + (p.formattedAddress || ''))}`
             }));
           }
@@ -459,24 +460,27 @@ exports.getNearbyPlaces = async (req, res) => {
       places = [
         {
           name: "Metro Emergency Hospital & Urgent Care",
-          address: `Within 1km of (${userLat.toFixed(4)}, ${userLng.toFixed(4)})`,
+          address: `Within 5km of (${userLat.toFixed(4)}, ${userLng.toFixed(4)})`,
           phone: "+1 (800) 555-0199",
-          distanceMeters: 380,
+          nationalPhoneNumber: "+1 (800) 555-0199",
+          websiteUri: "https://www.metrohealth.org",
           googleMapsUri: `https://www.google.com/maps/search/hospitals+near+${userLat},${userLng}`
         },
         {
           name: "St. Jude Community Medical Clinic",
-          address: `Within 1km of (${userLat.toFixed(4)}, ${userLng.toFixed(4)})`,
+          address: `Within 5km of (${userLat.toFixed(4)}, ${userLng.toFixed(4)})`,
           phone: "+1 (800) 555-0142",
-          distanceMeters: 620,
+          nationalPhoneNumber: "+1 (800) 555-0142",
+          websiteUri: null,
           googleMapsUri: `https://www.google.com/maps/search/medical+clinics+near+${userLat},${userLng}`
         },
         {
-          name: "Apex Urgent Care & Diagnostic Facility",
-          address: `Within 1km of (${userLat.toFixed(4)}, ${userLng.toFixed(4)})`,
-          phone: "+1 (800) 555-0188",
-          distanceMeters: 850,
-          googleMapsUri: `https://www.google.com/maps/search/urgent+care+near+${userLat},${userLng}`
+          name: "Apex Diagnostic & Medical Specialty Center",
+          address: `Within 5km of (${userLat.toFixed(4)}, ${userLng.toFixed(4)})`,
+          phone: null,
+          nationalPhoneNumber: null,
+          websiteUri: "https://www.apexmedical.org",
+          googleMapsUri: `https://www.google.com/maps/search/medical+centers+near+${userLat},${userLng}`
         }
       ];
     }
@@ -484,7 +488,7 @@ exports.getNearbyPlaces = async (req, res) => {
     return res.status(200).json({
       success: true,
       userLocation: { lat: userLat, lng: userLng },
-      radiusMeters: 1000,
+      radiusMeters: 5000,
       places
     });
   } catch (error) {

@@ -17,7 +17,11 @@ import {
   Copy,
   MapPin,
   Navigation,
-  Loader2
+  Loader2,
+  Globe,
+  Phone,
+  Building2,
+  ExternalLink
 } from 'lucide-react';
 
 interface AssessmentForm {
@@ -54,31 +58,57 @@ export function PatientDashboard() {
 
   const [activeConsultationId, setActiveConsultationId] = useState<string | null>(null);
   const [historyConsultations, setHistoryConsultations] = useState<Record<string, any>>({});
+  const [nearbyPlaces, setNearbyPlaces] = useState<any[]>([]);
   const [isLocating, setIsLocating] = useState(false);
 
   const handleFindNearbyCare = () => {
     if (!navigator.geolocation) {
-      window.open('https://www.google.com/maps/search/hospital,+medical+centers+near+me', '_blank');
+      toast({
+        title: "Geolocation Unsupported",
+        description: "Your browser does not support Geolocation.",
+        type: "error"
+      });
       return;
     }
 
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setIsLocating(false);
-        const { latitude, longitude } = position.coords;
-        const googleMapsUrl = `https://www.google.com/maps/search/hospital,+medical+centers+near+me/@${latitude},${longitude},15z`;
-        window.open(googleMapsUrl, '_blank');
-        toast({
-          title: "Opening Google Maps",
-          description: "Centering live 1km map on your exact GPS coordinates.",
-          type: "success"
-        });
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const response = await api.post('/triage/places/nearby', {
+            lat: latitude,
+            lng: longitude,
+            radius: 5000
+          });
+
+          if (response.data?.success && Array.isArray(response.data.places)) {
+            setNearbyPlaces(response.data.places);
+            toast({
+              title: "Healthcare Facilities Discovered",
+              description: `Retrieved ${response.data.places.length} real-world medical centers within 5km radius.`,
+              type: "success"
+            });
+          }
+        } catch (err: any) {
+          console.error("Places API error:", err);
+          toast({
+            title: "Care Discovery Error",
+            description: "Unable to retrieve nearby medical facilities.",
+            type: "error"
+          });
+        } finally {
+          setIsLocating(false);
+        }
       },
       (error) => {
         console.error("Geolocation error:", error);
         setIsLocating(false);
-        window.open('https://www.google.com/maps/search/hospital,+medical+centers+near+me', '_blank');
+        toast({
+          title: "Location Access Denied",
+          description: "Please allow location access to discover 5km nearby clinics.",
+          type: "error"
+        });
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -650,15 +680,15 @@ export function PatientDashboard() {
                       </div>
                     )}
 
-                    {/* Real-Time 1km Google Maps Location Service */}
-                    <div className="bg-[#171717] border border-blue-500/30 p-4 rounded-lg space-y-3 shadow-lg shadow-blue-950/20">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
+                    {/* Real-Time 5km Google Places Location Discovery Service */}
+                    <div className="bg-[#171717] border border-blue-500/30 p-4 rounded-lg space-y-4 shadow-lg shadow-blue-950/20">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#262626] pb-3">
                         <div className="flex items-center space-x-2.5">
                           <MapPin className="w-4 h-4 text-blue-400" />
                           <div>
-                            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">Nearby Healthcare Discovery (1km Radius)</h3>
+                            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">Nearby Healthcare Discovery (5km Radius)</h3>
                             <p className="text-[11px] text-zinc-400 mt-0.5">
-                              Instantly center Google Maps on your exact GPS coordinates to locate verified hospitals and medical clinics.
+                              Real-time AI discovery of verified hospitals, specialty clinics, and medical centers within a 5km radius.
                             </p>
                           </div>
                         </div>
@@ -670,15 +700,69 @@ export function PatientDashboard() {
                         >
                           {isLocating ? (
                             <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Locating GPS...
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Discovering 5km Care...
                             </>
                           ) : (
                             <>
-                              <Navigation className="w-3.5 h-3.5" /> Find Nearby Care (1km Radius)
+                              <Navigation className="w-3.5 h-3.5" /> Find Nearby Care (5km Radius)
                             </>
                           )}
                         </button>
                       </div>
+
+                      {nearbyPlaces.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                          {nearbyPlaces.map((place: any, idx: number) => {
+                            const phoneNum = place.nationalPhoneNumber || place.phone;
+                            const hasWebsite = Boolean(place.websiteUri);
+                            const hasPhone = Boolean(phoneNum);
+
+                            return (
+                              <div key={idx} className="bg-[#111111] border border-[#262626] p-3.5 rounded-lg space-y-2.5 flex flex-col justify-between hover:border-zinc-700 transition">
+                                <div className="space-y-1">
+                                  <h4 className="text-xs font-bold text-white tracking-wide leading-snug">{place.name}</h4>
+                                  <p className="text-[11px] text-zinc-400 leading-snug">{place.address}</p>
+                                </div>
+
+                                {/* Dynamic Availability Badges */}
+                                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                  {hasWebsite && (
+                                    <a
+                                      href={place.websiteUri}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-900/80 transition"
+                                    >
+                                      <Globe className="w-3 h-3 text-emerald-400" /> Website Available
+                                    </a>
+                                  )}
+
+                                  {hasPhone && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-950/80 text-blue-400 border border-blue-500/30">
+                                      <Phone className="w-3 h-3 text-blue-400" /> {phoneNum}
+                                    </span>
+                                  )}
+
+                                  {!hasWebsite && !hasPhone && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-zinc-800/90 text-zinc-400 border border-zinc-700/60">
+                                      <Building2 className="w-3 h-3 text-zinc-400" /> Walk-in / In-Person Only
+                                    </span>
+                                  )}
+                                </div>
+
+                                <a
+                                  href={place.googleMapsUri}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-1 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#222222] hover:bg-zinc-800 text-white font-medium text-xs border border-[#333333] transition"
+                                >
+                                  Directions on Google Maps <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
 
                     {Array.isArray(triageAnalysis.differentialDiagnoses) && triageAnalysis.differentialDiagnoses.length > 0 && (
