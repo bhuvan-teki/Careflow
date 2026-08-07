@@ -407,7 +407,7 @@ exports.getNearbyPlaces = async (req, res) => {
 
     const userLat = parseFloat(lat);
     const userLng = parseFloat(lng);
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
 
     let places = [];
 
