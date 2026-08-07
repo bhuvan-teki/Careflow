@@ -21,7 +21,8 @@ import {
   Globe,
   Phone,
   Building2,
-  ExternalLink
+  ExternalLink,
+  Calendar
 } from 'lucide-react';
 
 interface AssessmentForm {
@@ -32,6 +33,11 @@ interface AssessmentForm {
   additionalSymptoms: string;
   medicalConditions: string;
 }
+
+const checkBookingLikely = (name: string) => {
+  const keywords = ['diagnostic', 'clinic', 'eye', 'dental', 'care', 'physio', 'vision'];
+  return name ? keywords.some(kw => name.toLowerCase().includes(kw)) : false;
+};
 
 export function PatientDashboard() {
   const { user } = useAuth();
@@ -727,14 +733,25 @@ export function PatientDashboard() {
                                 {/* Dynamic Availability Badges */}
                                 <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                                   {hasWebsite && (
-                                    <a
-                                      href={place.websiteUri}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-900/80 transition"
-                                    >
-                                      <Globe className="w-3 h-3 text-emerald-400" /> Website Available
-                                    </a>
+                                    checkBookingLikely(place.name) ? (
+                                      <a
+                                        href={place.websiteUri}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-purple-950/90 text-purple-300 border border-purple-500/40 hover:bg-purple-900/90 transition shadow-sm shadow-purple-950/30"
+                                      >
+                                        <Calendar className="w-3 h-3 text-purple-300" /> Online Booking Likely
+                                      </a>
+                                    ) : (
+                                      <a
+                                        href={place.websiteUri}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-900/80 transition"
+                                      >
+                                        <Globe className="w-3 h-3 text-emerald-400" /> Check Site for Booking
+                                      </a>
+                                    )
                                   )}
 
                                   {hasPhone && (

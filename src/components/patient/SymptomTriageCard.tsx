@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, AlertTriangle, CheckCircle2, ShieldAlert, Sparkles, Loader2, Stethoscope, ArrowRight, RefreshCw, Printer, Mail, Copy, MapPin, Navigation, Globe, Phone, Building2, ExternalLink } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, ShieldAlert, Sparkles, Loader2, Stethoscope, ArrowRight, RefreshCw, Printer, Mail, Copy, MapPin, Navigation, Globe, Phone, Building2, ExternalLink, Calendar } from 'lucide-react';
 import api from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 
@@ -27,6 +27,11 @@ export interface TriageAnalysis {
   recommendedAction: string;
   disclaimer: string;
 }
+
+const checkBookingLikely = (name: string) => {
+  const keywords = ['diagnostic', 'clinic', 'eye', 'dental', 'care', 'physio', 'vision'];
+  return name ? keywords.some(kw => name.toLowerCase().includes(kw)) : false;
+};
 
 export const SymptomTriageCard: React.FC = () => {
   const [symptoms, setSymptoms] = useState('');
@@ -397,14 +402,25 @@ export const SymptomTriageCard: React.FC = () => {
                       {/* Dynamic Availability Badges */}
                       <div className="flex flex-wrap items-center gap-1.5 pt-1">
                         {hasWebsite && (
-                          <a
-                            href={place.websiteUri!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-900/80 transition"
-                          >
-                            <Globe className="w-3 h-3 text-emerald-400" /> Website Available
-                          </a>
+                          checkBookingLikely(place.name) ? (
+                            <a
+                              href={place.websiteUri!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md bg-purple-950/90 text-purple-300 border border-purple-500/40 hover:bg-purple-900/90 transition shadow-sm shadow-purple-950/30"
+                            >
+                              <Calendar className="w-3 h-3 text-purple-300" /> Online Booking Likely
+                            </a>
+                          ) : (
+                            <a
+                              href={place.websiteUri!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-900/80 transition"
+                            >
+                              <Globe className="w-3 h-3 text-emerald-400" /> Check Site for Booking
+                            </a>
+                          )
                         )}
 
                         {hasPhone && (
