@@ -257,7 +257,7 @@ CRITICAL INSTRUCTIONS:
 5. Formulate the EXACT, most accurate ICD-10 diagnostic billing code matching their primary clinical presentation (e.g. C34.9 for Lung Cancer, R34 for Anuria, R07.9 for Chest Pain, M54.5 for Low Back Pain, R50.9 for Fever, J06.9 ONLY for minor cold).
 6. Classify triage_level as "Low", "Moderate", "Urgent", or "Emergency".
 7. Assign recommended_pathway as "General Physician" | "Cardiology" | "Pulmonology" | "Neurology" | "Orthopedics" | "Nephrology" | "Oncology" | "Emergency Medicine".
-8. Return a raw, valid JSON object ONLY matching this schema without markdown code blocks, backticks (```json), or conversational text:
+8. Return a raw, valid JSON object ONLY matching this schema without markdown code blocks or conversational text:
 
 REQUIRED JSON SCHEMA:
 {
