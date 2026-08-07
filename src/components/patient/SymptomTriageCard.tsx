@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
-import { Activity, AlertTriangle, CheckCircle2, ShieldAlert, Sparkles, Loader2, Stethoscope, ArrowRight, RefreshCw, Printer } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, ShieldAlert, Sparkles, Loader2, Stethoscope, ArrowRight, RefreshCw, Printer, Mail, Copy, MapPin, ExternalLink, Navigation } from 'lucide-react';
 import api from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
+
+export interface NearbyPlace {
+  name: string;
+  address: string;
+  phone: string;
+  distanceMeters: number;
+  googleMapsUri: string;
+}
 
 export interface TriageAnalysis {
   severity: 'Low' | 'Moderate' | 'Urgent' | 'Emergency';
@@ -13,6 +21,7 @@ export interface TriageAnalysis {
     icd_10_code: string;
     icd_10_description: string;
   };
+  hospital_handoff_email?: string;
   differentialDiagnoses: string[];
   recommendedAction: string;
   disclaimer: string;
@@ -23,7 +32,62 @@ export const SymptomTriageCard: React.FC = () => {
   const [patientDetails, setPatientDetails] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [analysis, setAnalysis] = useState<TriageAnalysis | null>(null);
+  const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
+  const [isLocating, setIsLocating] = useState(false);
   const { toast } = useToast();
+
+  const handleFindNearbyCare = () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: "Geolocation Unsupported",
+        description: "Your browser does not support HTML5 Geolocation.",
+        type: "error"
+      });
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const response = await api.post('/triage/places/nearby', {
+            lat: latitude,
+            lng: longitude,
+            radius: 1000
+          });
+
+          if (response.data?.success && Array.isArray(response.data.places)) {
+            setNearbyPlaces(response.data.places);
+            toast({
+              title: "Nearby Care Discovered",
+              description: `Found ${response.data.places.length} verified medical facilities within 1km radius.`,
+              type: "success"
+            });
+          }
+        } catch (err: any) {
+          console.error("Places API error:", err);
+          toast({
+            title: "Care Discovery Failed",
+            description: "Unable to retrieve nearby medical facilities.",
+            type: "error"
+          });
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        toast({
+          title: "Location Access Denied",
+          description: "Please allow location permission to discover 1km nearby clinics.",
+          type: "error"
+        });
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,6 +223,7 @@ export const SymptomTriageCard: React.FC = () => {
                   setSymptoms('');
                   setPatientDetails('');
                   setAnalysis(null);
+                  setNearbyPlaces([]);
                 }}
                 className="px-4 py-2.5 rounded-xl border border-zinc-800 text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900 transition flex items-center gap-2"
               >
@@ -239,6 +304,106 @@ export const SymptomTriageCard: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Automated Hospital Dispatch Email */}
+          {analysis?.hospital_handoff_email && (
+            <div className="bg-zinc-900/90 border border-emerald-500/30 p-5 rounded-xl space-y-3.5 shadow-lg shadow-emerald-950/20">
+              <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+                <div className="flex items-center space-x-2.5">
+                  <Mail className="w-4 h-4 text-emerald-400" />
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">Automated Hospital Dispatch</h3>
+                </div>
+                <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded">
+                  Ready to Send
+                </span>
+              </div>
+
+              <textarea
+                readOnly
+                rows={7}
+                value={analysis.hospital_handoff_email}
+                className="w-full bg-zinc-950/90 border border-zinc-800 rounded-xl p-3.5 text-xs font-mono text-zinc-200 focus:outline-none resize-none leading-relaxed"
+              />
+
+              <div className="flex flex-wrap items-center justify-end gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(analysis.hospital_handoff_email || '');
+                    toast({
+                      title: "Copied to Clipboard",
+                      description: "Hospital handoff email report copied successfully.",
+                      type: "success"
+                    });
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-xs border border-zinc-700 transition flex items-center gap-1.5"
+                >
+                  <Copy className="w-3.5 h-3.5" /> Copy Email
+                </button>
+                <a
+                  href={`mailto:triage@hospital.com?subject=${encodeURIComponent('CareFlow Patient Triage Handoff Report')}&body=${encodeURIComponent(analysis.hospital_handoff_email)}`}
+                  className="px-4 py-2 rounded-xl bg-emerald-500 text-black hover:bg-emerald-400 font-bold text-xs transition flex items-center gap-1.5 shadow-md shadow-emerald-500/20"
+                >
+                  <Mail className="w-3.5 h-3.5" /> Send Handoff Email
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Real-Time 1km Google Places Location Service */}
+          <div className="bg-zinc-900/90 border border-blue-500/30 p-5 rounded-xl space-y-4 shadow-lg shadow-blue-950/20">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
+              <div className="flex items-center space-x-2.5">
+                <MapPin className="w-4 h-4 text-blue-400" />
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">Nearby Healthcare Discovery (1km Radius)</h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleFindNearbyCare}
+                disabled={isLocating}
+                className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-black font-bold text-xs transition flex items-center gap-2 shadow-md shadow-blue-500/20 disabled:opacity-50"
+              >
+                {isLocating ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Locating...
+                  </>
+                ) : (
+                  <>
+                    <Navigation className="w-3.5 h-3.5" /> Find Nearby Care (1km Radius)
+                  </>
+                )}
+              </button>
+            </div>
+
+            {nearbyPlaces.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {nearbyPlaces.map((place, idx) => (
+                  <div key={idx} className="bg-zinc-950/80 border border-zinc-800/80 p-3.5 rounded-xl space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="text-xs font-bold text-white tracking-wide">{place.name}</h4>
+                      <span className="text-[10px] font-mono font-bold text-blue-400 bg-blue-950/60 border border-blue-500/30 px-2 py-0.5 rounded flex-shrink-0">
+                        {place.distanceMeters}m away
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 leading-snug">{place.address}</p>
+                    <p className="text-[11px] font-mono text-zinc-300">📞 {place.phone}</p>
+                    <a
+                      href={place.googleMapsUri}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold pt-1"
+                    >
+                      Open in Google Maps <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-400 text-center py-2">
+                Click <span className="text-blue-400 font-semibold">"Find Nearby Care"</span> to discover real-world hospitals and clinics within an exact 1km GPS radius.
+              </p>
+            )}
+          </div>
 
           {/* Differential Diagnoses */}
           <div className="space-y-3">

@@ -252,11 +252,12 @@ CLINICAL INTAKE PROFILE:
 CRITICAL INSTRUCTIONS:
 1. Synthesize ALL provided details (main complaint, duration, severity, associated symptoms, medical conditions).
 2. MULTILINGUAL ACCESSIBILITY: No matter what language the user inputs their symptoms in (e.g. Hindi, Spanish, Telugu, French, German), you MUST output the final JSON executive_summary, summary, and icd_10_description strictly in professional Medical English.
-3. DO NOT assign low urgency or generic cold advice if severe, chronic, or high-risk conditions are reported (e.g. lung cancer, low urination/anuria, severe pain, shortness of breath, high fever).
-4. Formulate the EXACT, most accurate ICD-10 diagnostic billing code matching their primary clinical presentation (e.g. C34.9 for Lung Cancer, R34 for Anuria, R07.9 for Chest Pain, M54.5 for Low Back Pain, R50.9 for Fever, J06.9 ONLY for minor cold).
-5. Classify triage_level as "Low", "Moderate", "Urgent", or "Emergency".
-6. Assign recommended_pathway as "General Physician" | "Cardiology" | "Pulmonology" | "Neurology" | "Orthopedics" | "Nephrology" | "Oncology" | "Emergency Medicine".
-7. Return a raw, valid JSON object ONLY matching this schema without markdown code blocks, backticks (```json), or conversational text:
+3. HOSPITAL HANDOFF EMAIL: Generate a professional, structured email drafted for a hospital triage desk in hospital_handoff_email. It must summarize the patient's age, gender, main complaint, ICD-10 code, and urgency level. Keep it concise, formal, and ready to send.
+4. DO NOT assign low urgency or generic cold advice if severe, chronic, or high-risk conditions are reported (e.g. lung cancer, low urination/anuria, severe pain, shortness of breath, high fever).
+5. Formulate the EXACT, most accurate ICD-10 diagnostic billing code matching their primary clinical presentation (e.g. C34.9 for Lung Cancer, R34 for Anuria, R07.9 for Chest Pain, M54.5 for Low Back Pain, R50.9 for Fever, J06.9 ONLY for minor cold).
+6. Classify triage_level as "Low", "Moderate", "Urgent", or "Emergency".
+7. Assign recommended_pathway as "General Physician" | "Cardiology" | "Pulmonology" | "Neurology" | "Orthopedics" | "Nephrology" | "Oncology" | "Emergency Medicine".
+8. Return a raw, valid JSON object ONLY matching this schema without markdown code blocks, backticks (```json), or conversational text:
 
 REQUIRED JSON SCHEMA:
 {
@@ -267,6 +268,7 @@ REQUIRED JSON SCHEMA:
     "icd_10_code": "e.g., C34.9, R34, R07.9, M54.5",
     "icd_10_description": "Official medical ICD-10 description"
   },
+  "hospital_handoff_email": "Subject: URGENT CLINICAL HANDOFF: Patient Triage Intake [ICD-10: C34.9]\n\nDear Hospital Triage Desk,\n\nPlease find the incoming patient clinical triage report:\n- Patient Profile: 45-year-old Male\n- Chief Complaint: Persistent Cough & Dyspnea\n- Urgency Level: Urgent\n- Primary ICD-10 Code: C34.9 (Malignant neoplasm of bronchus or lung, unspecified)\n- Recommended Specialty Pathway: Oncology / Pulmonology\n\nPlease notify the attending specialist and prepare intake documentation.\n\nSincerely,\nCareFlow Clinical Intake System",
   "severity": "Low" | "Moderate" | "Urgent" | "Emergency",
   "summary": "Brief summary of symptom evaluation",
   "differentialDiagnoses": ["Condition A", "Condition B", "Condition C"],
@@ -301,16 +303,35 @@ REQUIRED JSON SCHEMA:
     // Extract or build default billing_data
     const icdCode = parsed.billing_data?.icd_10_code || 'R69';
     const icdDesc = parsed.billing_data?.icd_10_description || 'Illness, unspecified';
+    const triageLevel = parsed.triage_level || parsed.severity || 'Moderate';
+    const pathway = parsed.recommended_pathway || 'General Physician';
+
+    const defaultHandoffEmail = `Subject: CLINICAL HANDOFF REPORT: Patient Intake [ICD-10: ${icdCode}]
+
+Dear Hospital Triage Desk,
+
+Please find the incoming patient clinical triage report:
+- Chief Complaint: ${symptoms}
+- Patient Context: ${patientDetails || 'Self-reported'}
+- Urgency Assessment: ${triageLevel}
+- Primary ICD-10 Billing Code: ${icdCode} (${icdDesc})
+- Recommended Care Pathway: ${pathway}
+
+Please prepare the intake desk and notify the attending care team.
+
+Sincerely,
+CareFlow Clinical Intake System`;
 
     return {
       executive_summary: parsed.executive_summary || parsed.summary || `Clinical evaluation for reported symptoms: ${symptoms}`,
-      triage_level: parsed.triage_level || parsed.severity || 'Moderate',
-      recommended_pathway: parsed.recommended_pathway || 'General Physician',
+      triage_level: triageLevel,
+      recommended_pathway: pathway,
       billing_data: {
         icd_10_code: icdCode,
         icd_10_description: icdDesc
       },
-      severity: parsed.severity || parsed.triage_level || 'Moderate',
+      hospital_handoff_email: parsed.hospital_handoff_email || defaultHandoffEmail,
+      severity: triageLevel,
       summary: parsed.summary || parsed.executive_summary || `Symptom evaluation for: ${symptoms}`,
       differentialDiagnoses: Array.isArray(parsed.differentialDiagnoses) && parsed.differentialDiagnoses.length > 0
         ? parsed.differentialDiagnoses
@@ -359,6 +380,22 @@ REQUIRED JSON SCHEMA:
       icdDesc = 'Fever, unspecified';
     }
 
+    const fallbackHandoffEmail = `Subject: CLINICAL HANDOFF REPORT: Patient Intake [ICD-10: ${icdCode}]
+
+Dear Hospital Triage Desk,
+
+Please find the incoming patient clinical triage report:
+- Chief Complaint: ${symptoms}
+- Patient Context: ${patientDetails || 'Self-reported'}
+- Urgency Level: ${severity}
+- Primary ICD-10 Code: ${icdCode} (${icdDesc})
+- Recommended Pathway: ${pathway}
+
+Please notify the attending specialist and prepare intake documentation.
+
+Sincerely,
+CareFlow Clinical Intake System`;
+
     return {
       executive_summary: `Structured triage assessment for reported symptoms: "${symptoms}".`,
       triage_level: severity,
@@ -367,6 +404,7 @@ REQUIRED JSON SCHEMA:
         icd_10_code: icdCode,
         icd_10_description: icdDesc
       },
+      hospital_handoff_email: fallbackHandoffEmail,
       severity,
       summary: `Educational triage for reported symptoms ("${symptoms}").`,
       differentialDiagnoses: diagnoses,
