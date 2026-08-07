@@ -363,6 +363,10 @@ app.post('/api/triage/analyze', async (req, res) => {
   }
 });
 
+// Real-Time 1km Google Places Location Route
+app.post('/api/triage/places/nearby', require('./src/controllers/workflowController').getNearbyPlaces);
+app.post('/api/places/nearby', require('./src/controllers/workflowController').getNearbyPlaces);
+
 // Live Active Patient Consultations Route for Hospital Staff View
 app.get('/api/consultations/active', require('./src/controllers/workflowController').getActiveConsultations);
 
