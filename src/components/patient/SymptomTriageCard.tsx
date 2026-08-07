@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, AlertTriangle, CheckCircle2, ShieldAlert, Sparkles, Loader2, Stethoscope, ArrowRight, RefreshCw, Printer, Mail, Copy, MapPin, Navigation, Globe, Phone, Building2, ExternalLink, Calendar } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, ShieldAlert, Sparkles, Loader2, Stethoscope, ArrowRight, RefreshCw, Printer, Mail, Copy, MapPin, Navigation, Globe, Phone, Building2, ExternalLink, Calendar, MessageSquare } from 'lucide-react';
 import api from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 
@@ -391,6 +391,9 @@ export const SymptomTriageCard: React.FC = () => {
                   const phoneNum = place.nationalPhoneNumber || place.phone;
                   const hasWebsite = Boolean(place.websiteUri);
                   const hasPhone = Boolean(phoneNum);
+                  const phoneDigits = phoneNum ? phoneNum.replace(/\D/g, '') : '';
+                  const smsBody = encodeURIComponent(analysis?.hospital_handoff_email || "Patient Clinical Triage Intake Request");
+                  const smsUrl = phoneDigits ? `sms:${phoneDigits}?body=${smsBody}` : '#';
 
                   return (
                     <div key={idx} className="bg-zinc-950/90 border border-zinc-800/90 p-4 rounded-xl space-y-3 flex flex-col justify-between hover:border-zinc-700 transition">
@@ -436,14 +439,25 @@ export const SymptomTriageCard: React.FC = () => {
                         )}
                       </div>
 
-                      <a
-                        href={place.googleMapsUri}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-medium text-xs border border-zinc-700 transition"
-                      >
-                        Directions on Google Maps <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
+                      <div className="space-y-1.5 pt-1">
+                        {hasPhone && phoneDigits && (
+                          <a
+                            href={smsUrl}
+                            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition shadow-md shadow-emerald-500/20"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" /> Text Triage Report (SMS)
+                          </a>
+                        )}
+
+                        <a
+                          href={place.googleMapsUri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-medium text-xs border border-zinc-700 transition"
+                        >
+                          Directions on Google Maps <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
                     </div>
                   );
                 })}

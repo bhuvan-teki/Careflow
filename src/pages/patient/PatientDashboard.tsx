@@ -22,7 +22,8 @@ import {
   Phone,
   Building2,
   ExternalLink,
-  Calendar
+  Calendar,
+  MessageSquare
 } from 'lucide-react';
 
 interface AssessmentForm {
@@ -722,6 +723,9 @@ export function PatientDashboard() {
                             const phoneNum = place.nationalPhoneNumber || place.phone;
                             const hasWebsite = Boolean(place.websiteUri);
                             const hasPhone = Boolean(phoneNum);
+                            const phoneDigits = phoneNum ? phoneNum.replace(/\D/g, '') : '';
+                            const smsBody = encodeURIComponent(triageAnalysis?.hospital_handoff_email || "Patient Clinical Triage Intake Request");
+                            const smsUrl = phoneDigits ? `sms:${phoneDigits}?body=${smsBody}` : '#';
 
                             return (
                               <div key={idx} className="bg-[#111111] border border-[#262626] p-3.5 rounded-lg space-y-2.5 flex flex-col justify-between hover:border-zinc-700 transition">
@@ -767,14 +771,25 @@ export function PatientDashboard() {
                                   )}
                                 </div>
 
-                                <a
-                                  href={place.googleMapsUri}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="mt-1 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#222222] hover:bg-zinc-800 text-white font-medium text-xs border border-[#333333] transition"
-                                >
-                                  Directions on Google Maps <ExternalLink className="w-3 h-3" />
-                                </a>
+                                <div className="space-y-1.5 pt-1">
+                                  {hasPhone && phoneDigits && (
+                                    <a
+                                      href={smsUrl}
+                                      className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition shadow-md shadow-emerald-500/20"
+                                    >
+                                      <MessageSquare className="w-3.5 h-3.5" /> Text Triage Report (SMS)
+                                    </a>
+                                  )}
+
+                                  <a
+                                    href={place.googleMapsUri}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#222222] hover:bg-zinc-800 text-white font-medium text-xs border border-[#333333] transition"
+                                  >
+                                    Directions on Google Maps <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                </div>
                               </div>
                             );
                           })}
