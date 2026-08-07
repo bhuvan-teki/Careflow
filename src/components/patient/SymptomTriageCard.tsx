@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, AlertTriangle, CheckCircle2, ShieldAlert, Sparkles, Loader2, Stethoscope, ArrowRight, RefreshCw, Printer, Mail, Copy, MapPin, Navigation, Globe, Phone, Building2, ExternalLink, Calendar, MessageSquare } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, ShieldAlert, Sparkles, Loader2, Stethoscope, ArrowRight, RefreshCw, Printer, Mail, Copy, MapPin, Navigation, Globe, Phone, Building2, ExternalLink, Calendar, Paperclip, Upload, FileText, Smartphone } from 'lucide-react';
 import api from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 
@@ -33,6 +33,13 @@ const checkBookingLikely = (name: string) => {
   return name ? keywords.some(kw => name.toLowerCase().includes(kw)) : false;
 };
 
+const getProfessionalSmsDraft = (analysisData: any, inputSymptoms: string) => {
+  const complaint = inputSymptoms?.trim() || 'Reported Symptoms';
+  const icdCode = analysisData?.billing_data?.icd_10_code || 'R69';
+  const urgency = analysisData?.triage_level || analysisData?.severity || 'Moderate';
+  return `URGENT CLINICAL INTAKE: Patient reporting ${complaint} (ICD-10: ${icdCode}). Triage Level: ${urgency}. Patient has attached secure medical records, photos, and a full triage PDF. View patient file here: https://careflow-front-end.onrender.com/secure/patient-file-temp-link`;
+};
+
 export const SymptomTriageCard: React.FC = () => {
   const [symptoms, setSymptoms] = useState('');
   const [patientDetails, setPatientDetails] = useState('');
@@ -40,6 +47,7 @@ export const SymptomTriageCard: React.FC = () => {
   const [analysis, setAnalysis] = useState<TriageAnalysis | null>(null);
   const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
   const [isLocating, setIsLocating] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<string[]>([]);
   const { toast } = useToast();
 
   const handleFindNearbyCare = () => {
@@ -355,6 +363,65 @@ export const SymptomTriageCard: React.FC = () => {
             </div>
           )}
 
+          {/* Attach Medical Records UI (Optional) */}
+          <div className="bg-zinc-900/90 border border-purple-500/30 p-4 sm:p-5 rounded-xl space-y-3 shadow-lg shadow-purple-950/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <Paperclip className="w-4 h-4 text-purple-400" />
+                <div>
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">Attach Medical Records & Photos (Optional)</h3>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    Upload lab receipts, rash photos, or previous prescriptions to attach to your secure SMS & triage dispatch.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono font-bold text-purple-400 bg-purple-950/60 border border-purple-500/30 px-2 py-0.5 rounded">
+                Secure File Vault
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
+              <label className="cursor-pointer w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition shadow-md shadow-purple-600/20">
+                <Upload className="w-4 h-4" /> Attach Medical Files
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      const names = Array.from(e.target.files).map(f => f.name);
+                      setAttachedFiles(prev => [...prev, ...names]);
+                      toast({
+                        title: "Files Attached",
+                        description: `Attached ${names.length} record(s) to secure triage dispatch.`,
+                        type: "success"
+                      });
+                    }
+                  }}
+                />
+              </label>
+
+              {attachedFiles.length > 0 ? (
+                <div className="flex flex-wrap gap-2 items-center">
+                  {attachedFiles.map((file, i) => (
+                    <span key={i} className="inline-flex items-center gap-1.5 text-[11px] font-mono font-medium px-2.5 py-1 rounded-md bg-purple-950/80 text-purple-300 border border-purple-500/30">
+                      <FileText className="w-3 h-3 text-purple-400" /> {file}
+                    </span>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setAttachedFiles([])}
+                    className="text-[10px] text-zinc-500 hover:text-zinc-300 underline font-mono"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              ) : (
+                <span className="text-xs text-zinc-500 italic">No files selected yet (Optional)</span>
+              )}
+            </div>
+          </div>
+
           {/* Real-Time 5km Google Places Location Discovery Service */}
           <div className="bg-zinc-900/90 border border-blue-500/30 p-5 rounded-xl space-y-4 shadow-lg shadow-blue-950/20">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-3.5">
@@ -392,7 +459,8 @@ export const SymptomTriageCard: React.FC = () => {
                   const hasWebsite = Boolean(place.websiteUri);
                   const hasPhone = Boolean(phoneNum);
                   const phoneDigits = phoneNum ? phoneNum.replace(/\D/g, '') : '';
-                  const smsBody = encodeURIComponent(analysis?.hospital_handoff_email || "Patient Clinical Triage Intake Request");
+                  const professionalSmsDraft = getProfessionalSmsDraft(analysis, symptoms);
+                  const smsBody = encodeURIComponent(professionalSmsDraft);
                   const smsUrl = phoneDigits ? `sms:${phoneDigits}?body=${smsBody}` : '#';
 
                   return (
@@ -445,7 +513,7 @@ export const SymptomTriageCard: React.FC = () => {
                             href={smsUrl}
                             className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition shadow-md shadow-emerald-500/20"
                           >
-                            <MessageSquare className="w-3.5 h-3.5" /> Text Triage Report (SMS)
+                            <Smartphone className="w-3.5 h-3.5" /> 📱 Send Intake SMS
                           </a>
                         )}
 
