@@ -58,7 +58,7 @@ export function PatientDashboard() {
 
   const handleFindNearbyCare = () => {
     if (!navigator.geolocation) {
-      window.open('https://www.google.com/maps/search/medical+centers+near+me', '_blank');
+      window.open('https://www.google.com/maps/search/hospital,+medical+centers+near+me', '_blank');
       return;
     }
 
@@ -67,7 +67,7 @@ export function PatientDashboard() {
       (position) => {
         setIsLocating(false);
         const { latitude, longitude } = position.coords;
-        const googleMapsUrl = `https://www.google.com/maps/search/medical+centers/@${latitude},${longitude},15z`;
+        const googleMapsUrl = `https://www.google.com/maps/search/hospital,+medical+centers+near+me/@${latitude},${longitude},15z`;
         window.open(googleMapsUrl, '_blank');
         toast({
           title: "Opening Google Maps",
@@ -78,7 +78,7 @@ export function PatientDashboard() {
       (error) => {
         console.error("Geolocation error:", error);
         setIsLocating(false);
-        window.open('https://www.google.com/maps/search/medical+centers+near+me', '_blank');
+        window.open('https://www.google.com/maps/search/hospital,+medical+centers+near+me', '_blank');
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
